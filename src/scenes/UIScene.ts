@@ -3,12 +3,14 @@ import { GAME, SCENE_KEYS } from '../config';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 import { SkillButton } from '../ui/SkillButton';
 
-// Screen-space overlay: health bar, virtual joystick, and the skill button.
-// Runs in parallel above GameScene; communicates via the game registry/events.
+// Screen-space overlay: HP/XP bars, level, timer, kills, virtual joystick, and
+// the skill button. Runs in parallel above GameScene; communicates via the
+// game registry/events.
 export class UIScene extends Phaser.Scene {
   private joystick!: VirtualJoystick;
   private skillButton!: SkillButton;
-  private hpBar!: Phaser.GameObjects.Graphics;
+  private bars!: Phaser.GameObjects.Graphics;
+  private statusText!: Phaser.GameObjects.Text;
 
   constructor() {
     super(SCENE_KEYS.UI);
@@ -25,10 +27,16 @@ export class UIScene extends Phaser.Scene {
       () => this.game.events.emit('skill'),
     );
 
-    this.hpBar = this.add.graphics().setScrollFactor(0).setDepth(900);
+    this.bars = this.add.graphics().setScrollFactor(0).setDepth(900);
 
-    this.add
-      .text(8, 6, 'HP', { fontFamily: 'monospace', fontSize: '10px', color: '#ffffff' })
+    this.statusText = this.add
+      .text(GAME.WIDTH / 2, 6, '', {
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        color: '#ffffff',
+        align: 'center',
+      })
+      .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setDepth(900);
   }
@@ -37,23 +45,48 @@ export class UIScene extends Phaser.Scene {
     // Feed joystick direction to GameScene's InputController.
     this.registry.set('joyVec', { x: this.joystick.vector.x, y: this.joystick.vector.y });
     this.skillButton.update(delta);
-    this.drawHpBar();
+    this.drawBars();
+    this.drawStatus();
   }
 
-  private drawHpBar(): void {
+  private drawBars(): void {
     const hp = (this.registry.get('hp') as number) ?? 100;
     const maxHp = (this.registry.get('maxHp') as number) ?? 100;
-    const frac = Phaser.Math.Clamp(hp / maxHp, 0, 1);
-    const x = 26;
-    const y = 8;
-    const w = 80;
-    const h = 8;
-    this.hpBar.clear();
-    this.hpBar.fillStyle(0x000000, 0.5);
-    this.hpBar.fillRect(x - 1, y - 1, w + 2, h + 2);
-    this.hpBar.fillStyle(0x992222, 1);
-    this.hpBar.fillRect(x, y, w, h);
-    this.hpBar.fillStyle(0x33dd55, 1);
-    this.hpBar.fillRect(x, y, w * frac, h);
+    const xp = (this.registry.get('xp') as number) ?? 0;
+    const xpToNext = (this.registry.get('xpToNext') as number) ?? 5;
+
+    this.bars.clear();
+
+    // HP bar (top-left).
+    this.drawBar(8, 8, 110, 8, Phaser.Math.Clamp(hp / maxHp, 0, 1), 0x992222, 0x33dd55);
+    // XP bar (full width, just under HP).
+    this.drawBar(8, 20, GAME.WIDTH - 16, 4, Phaser.Math.Clamp(xp / xpToNext, 0, 1), 0x222a44, 0x49c2ff);
+  }
+
+  private drawBar(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    frac: number,
+    bgColor: number,
+    fgColor: number,
+  ): void {
+    this.bars.fillStyle(0x000000, 0.5);
+    this.bars.fillRect(x - 1, y - 1, w + 2, h + 2);
+    this.bars.fillStyle(bgColor, 1);
+    this.bars.fillRect(x, y, w, h);
+    this.bars.fillStyle(fgColor, 1);
+    this.bars.fillRect(x, y, w * frac, h);
+  }
+
+  private drawStatus(): void {
+    const level = (this.registry.get('level') as number) ?? 1;
+    const timeMs = (this.registry.get('timeMs') as number) ?? 0;
+    const kills = (this.registry.get('kills') as number) ?? 0;
+    const secs = Math.floor(timeMs / 1000);
+    const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+    const ss = String(secs % 60).padStart(2, '0');
+    this.statusText.setText(`Lv.${level}   ${mm}:${ss}   처치 ${kills}`);
   }
 }

@@ -44,6 +44,23 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.fillCircle(T / 2, T / 2 - 2, 2.5);
   });
 
+  // --- XP gem: small cyan diamond ---
+  drawTexture(scene, TEX.GEM, 10, 10, (g) => {
+    g.fillStyle(0x33e6ff, 1);
+    g.fillTriangle(5, 0, 10, 5, 5, 10);
+    g.fillTriangle(5, 0, 0, 5, 5, 10);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillCircle(5, 4, 1.5);
+  });
+
+  // --- Projectile: small yellow blob ---
+  drawTexture(scene, TEX.PROJECTILE, 8, 8, (g) => {
+    g.fillStyle(0xfff066, 1);
+    g.fillCircle(4, 4, 4);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(3, 3, 1.5);
+  });
+
   // --- Virtual joystick base + thumb ---
   const baseR = 44;
   drawTexture(scene, TEX.JOY_BASE, baseR * 2, baseR * 2, (g) => {

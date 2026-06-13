@@ -18,6 +18,8 @@ export const TEX = {
   WATER: 'tex-water',
   PLAYER: 'tex-player',
   ENEMY: 'tex-enemy',
+  GEM: 'tex-gem',
+  PROJECTILE: 'tex-projectile',
   JOY_BASE: 'tex-joy-base',
   JOY_THUMB: 'tex-joy-thumb',
   SKILL_BTN: 'tex-skill-btn',

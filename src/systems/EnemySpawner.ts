@@ -3,11 +3,12 @@ import { Enemy } from '../entities/Enemy';
 import type { IslandManager } from '../systems/IslandManager';
 
 // Spawns aliens at the island's water edge on a timer and drives their chase.
-// Uses a pooled physics group so dead enemies are recycled (no GC churn).
+// Difficulty (spawn rate + enemy HP) ramps with elapsed run time. Pooled.
 export class EnemySpawner {
   readonly group: Phaser.Physics.Arcade.Group;
   private accumMs = 0;
-  private intervalMs = 1200;
+  private intervalMs = 1100;
+  private elapsedMs = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -21,24 +22,34 @@ export class EnemySpawner {
   }
 
   update(deltaMs: number, targetX: number, targetY: number): void {
+    this.elapsedMs += deltaMs;
+
     this.accumMs += deltaMs;
     if (this.accumMs >= this.intervalMs) {
       this.accumMs -= this.intervalMs;
       this.spawnOne();
     }
-    // Difficulty creep: spawns slowly accelerate over the run.
-    this.intervalMs = Math.max(350, this.intervalMs - deltaMs * 0.01);
+    // Spawns accelerate toward a floor of ~320ms over the run.
+    this.intervalMs = Math.max(320, this.intervalMs - deltaMs * 0.012);
 
     this.group.getChildren().forEach((child) => {
-      const e = child as Enemy;
-      if (e.active) e.chase(targetX, targetY);
+      (child as Enemy).tick(deltaMs, targetX, targetY);
     });
+  }
+
+  get activeCount(): number {
+    return this.group.countActive(true);
   }
 
   private spawnOne(): void {
     const { x, y } = this.randomEdgePoint();
     const enemy = this.group.get(x, y) as Enemy | null;
-    if (enemy) enemy.spawn(x, y);
+    if (!enemy) return;
+    // HP grows ~+1 every 15s; speed drifts up slightly.
+    const minutes = this.elapsedMs / 60000;
+    const hp = 8 + Math.floor(this.elapsedMs / 15000);
+    const speed = 42 + minutes * 6;
+    enemy.spawn(x, y, hp, speed);
   }
 
   // Pick a point just outside the island, in world pixels.

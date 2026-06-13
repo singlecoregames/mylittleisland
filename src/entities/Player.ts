@@ -1,15 +1,19 @@
 import Phaser from 'phaser';
 import { GAME, TEX } from '../config';
 import type { IslandManager } from '../systems/IslandManager';
+import type { RunState } from '../state/RunState';
 
-// The frog. Moves via a direction vector; cannot leave the island's land tiles.
+// The frog. Reads its speed from RunState (so upgrades take effect) and cannot
+// leave the island's land tiles.
 export class Player extends Phaser.Physics.Arcade.Sprite {
-  speed = 90; // px/sec (upgradeable later)
-  maxHp = 100;
-  hp = 100;
   private lastLand = new Phaser.Math.Vector2();
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private run: RunState,
+  ) {
     super(scene, x, y, TEX.PLAYER);
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -20,31 +24,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   move(dir: Phaser.Math.Vector2, island: IslandManager, deltaSec: number): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setVelocity(dir.x * this.speed, dir.y * this.speed);
+    const speed = this.run.moveSpeed;
+    body.setVelocity(dir.x * speed, dir.y * speed);
 
-    // After integrating velocity we verify the new center is still on land;
-    // if it walked into water, snap back to the last valid land position.
+    // Verify the new center stays on land; if it walks into water, slide along
+    // whichever axis remains valid (wall-hugging) or stop.
     const nextX = this.x + body.velocity.x * deltaSec;
     const nextY = this.y + body.velocity.y * deltaSec;
     if (island.isLandAtWorld(nextX, nextY)) {
       this.lastLand.set(nextX, nextY);
+    } else if (island.isLandAtWorld(nextX, this.y)) {
+      body.setVelocityY(0);
+      this.lastLand.set(nextX, this.y);
+    } else if (island.isLandAtWorld(this.x, nextY)) {
+      body.setVelocityX(0);
+      this.lastLand.set(this.x, nextY);
     } else {
-      // Try sliding along whichever axis stays on land (wall-hugging).
-      const slideX = island.isLandAtWorld(nextX, this.y);
-      const slideY = island.isLandAtWorld(this.x, nextY);
-      if (slideX) {
-        body.setVelocityY(0);
-        this.lastLand.set(nextX, this.y);
-      } else if (slideY) {
-        body.setVelocityX(0);
-        this.lastLand.set(this.x, nextY);
-      } else {
-        body.setVelocity(0, 0);
-      }
+      body.setVelocity(0, 0);
     }
-  }
-
-  takeDamage(amount: number): void {
-    this.hp = Math.max(0, this.hp - amount);
   }
 }
