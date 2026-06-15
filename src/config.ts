@@ -10,6 +10,7 @@ export const SCENE_KEYS = {
   PRELOAD: 'Preload',
   GAME: 'Game',
   UI: 'UI',
+  RESULT: 'Result',
 } as const;
 
 // Texture keys for the programmatically generated placeholder art.

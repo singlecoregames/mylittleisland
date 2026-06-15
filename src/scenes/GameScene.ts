@@ -121,37 +121,12 @@ export class GameScene extends Phaser.Scene {
     this.dead = true;
     this.physics.pause();
 
-    const cam = this.cameras.main;
-    const cx = cam.midPoint.x;
-    const cy = cam.midPoint.y;
-    this.add
-      .text(cx, cy - 20, 'GAME OVER', {
-        fontFamily: 'monospace',
-        fontSize: '24px',
-        color: '#ff6b6b',
-      })
-      .setOrigin(0.5)
-      .setDepth(2000);
-    this.add
-      .text(cx, cy + 14, `생존 ${Math.floor(this.run.timeMs / 1000)}초 · 처치 ${this.run.kills}`, {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
-      .setDepth(2000);
-    this.add
-      .text(cx, cy + 44, '탭하여 다시 시작', {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        color: '#aebbd6',
-      })
-      .setOrigin(0.5)
-      .setDepth(2000);
-
-    this.input.once(Phaser.Input.Events.POINTER_DOWN, () => {
-      this.scene.stop(SCENE_KEYS.UI);
-      this.scene.restart();
+    // Hand the run summary to the settlement scene, which awards/persists amber.
+    this.scene.stop(SCENE_KEYS.UI);
+    this.scene.start(SCENE_KEYS.RESULT, {
+      timeMs: this.run.timeMs,
+      kills: this.run.kills,
+      level: this.run.level,
     });
   }
 
