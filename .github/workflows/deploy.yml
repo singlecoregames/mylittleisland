@@ -39,6 +39,10 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # Now that the repo is public, the workflow token can create the
+          # Pages site automatically (no manual UI step needed).
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
