@@ -9,7 +9,12 @@ import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { InputController } from '../core/InputController';
 import { RunState } from '../state/RunState';
+import { SaveManager } from '../core/SaveManager';
+import { aggregateBonuses } from '../data/metaNodes';
 import type { LevelUpData } from './LevelUpScene';
+
+// Base island dimension (tiles per side) before meta expansion is applied.
+const BASE_ISLAND = 14;
 
 // The run scene: island + frog + auto-weapons + chasing aliens + XP/level-ups.
 export class GameScene extends Phaser.Scene {
@@ -37,8 +42,13 @@ export class GameScene extends Phaser.Scene {
     this.levelUpActive = false;
     this.dead = false;
 
-    // Starting island: 14x14 tiles. Meta "island expansion" will grow this.
-    this.island = new IslandManager(this, 14, 14);
+    // Permanent meta-graph bonuses earned across runs.
+    const bonuses = aggregateBonuses(SaveManager.load().nodes);
+    this.run.applyMeta(bonuses);
+
+    // Starting island grows with the "island expansion" meta nodes.
+    const side = BASE_ISLAND + bonuses.islandTiles;
+    this.island = new IslandManager(this, side, side);
 
     const spawn = this.island.centerWorld;
     this.player = new Player(this, spawn.x, spawn.y, this.run);
@@ -75,6 +85,9 @@ export class GameScene extends Phaser.Scene {
 
     // HUD/touch overlay on top of this scene.
     this.scene.launch(SCENE_KEYS.UI);
+
+    // Meta "early growth" start XP — may immediately open a level-up card.
+    if (bonuses.startXp > 0) this.queueLevelUps(this.run.addXp(bonuses.startXp));
   }
 
   private onSkill(): void {
