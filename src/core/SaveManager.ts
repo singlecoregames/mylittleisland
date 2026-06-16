@@ -45,6 +45,17 @@ export class SaveManager {
     return data;
   }
 
+  // Spends amber to unlock a meta-graph node, persisting the result. No-op (and
+  // returns the unchanged save) if already owned or unaffordable.
+  static spendAndUnlock(id: string, cost: number): SaveData {
+    const data = this.load();
+    if (data.nodes.includes(id) || data.amber < cost) return data;
+    data.amber -= cost;
+    data.nodes.push(id);
+    this.save(data);
+    return data;
+  }
+
   static reset(): void {
     try {
       localStorage.removeItem(STORAGE_KEY);

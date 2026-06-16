@@ -11,6 +11,7 @@ export const SCENE_KEYS = {
   GAME: 'Game',
   UI: 'UI',
   RESULT: 'Result',
+  META: 'Meta',
 } as const;
 
 // Texture keys for the programmatically generated placeholder art.

@@ -68,7 +68,7 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const prompt = this.add
-      .text(cx, 268, '탭하여 다시 시작', {
+      .text(cx, 268, '탭하여 업그레이드 화면으로', {
         fontFamily: 'monospace',
         fontSize: '13px',
         color: '#49c2ff',
@@ -85,7 +85,7 @@ export class ResultScene extends Phaser.Scene {
     // Small guard so the death tap doesn't immediately restart.
     this.time.delayedCall(350, () => {
       this.input.once(Phaser.Input.Events.POINTER_DOWN, () => {
-        this.scene.start(SCENE_KEYS.GAME);
+        this.scene.start(SCENE_KEYS.META);
       });
     });
   }
