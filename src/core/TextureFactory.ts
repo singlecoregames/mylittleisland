@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME, TEX } from '../config';
+import { ENEMY_TYPES, enemyTexKey } from '../data/enemies';
 
 // Generates simple placeholder art at runtime so the project builds and runs
 // with zero binary assets. Swap these out for real sprites later (M8 polish).
@@ -36,13 +37,17 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.fillCircle(T / 2 + 4, T / 2 - 4, 1.5);
   });
 
-  // --- Enemy (alien): purple diamond ---
-  drawTexture(scene, TEX.ENEMY, T, T, (g) => {
-    g.fillStyle(0xb24bd8, 1);
+  // --- Enemy (alien): base purple blob + a coloured body per type ---
+  const drawAlien = (color: number) => (g: Phaser.GameObjects.Graphics) => {
+    g.fillStyle(color, 1);
     g.fillCircle(T / 2, T / 2, 9);
-    g.fillStyle(0x39ff14, 1);
+    g.fillStyle(0x39ff14, 1); // green eye
     g.fillCircle(T / 2, T / 2 - 2, 2.5);
-  });
+  };
+  drawTexture(scene, TEX.ENEMY, T, T, drawAlien(0xb24bd8));
+  for (const t of Object.values(ENEMY_TYPES)) {
+    drawTexture(scene, enemyTexKey(t.id), T, T, drawAlien(t.color));
+  }
 
   // --- XP gem: small cyan diamond ---
   drawTexture(scene, TEX.GEM, 10, 10, (g) => {

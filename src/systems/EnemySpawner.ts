@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
+import { ENEMY_TYPES, GRUNT, type EnemyType } from '../data/enemies';
 import type { IslandManager } from '../systems/IslandManager';
 import type { FlowField } from './FlowField';
 
@@ -23,6 +24,7 @@ export class EnemySpawner {
   private elapsedMs = 0;
   private steerVec = new Phaser.Math.Vector2();
   private avoidVec = new Phaser.Math.Vector2();
+  private typeList = Object.values(ENEMY_TYPES);
   // Spatial hash of active enemies, rebuilt each frame (arrays reused).
   private grid = new Map<number, Enemy[]>();
 
@@ -125,13 +127,50 @@ export class EnemySpawner {
 
   private spawnOne(): void {
     const { x, y } = this.randomEdgePoint();
+    this.spawnType(x, y, this.pickType());
+  }
+
+  // Spawns one alien of the given type, scaling the run's ramping base stats by
+  // the type's multipliers. Used for both edge spawns and splitter offspring.
+  private spawnType(x: number, y: number, type: EnemyType): void {
     const enemy = this.group.get(x, y) as Enemy | null;
     if (!enemy) return;
-    // HP grows ~+1 every 15s; speed drifts up slightly.
+    // Base HP grows ~+1 every 15s; base speed drifts up slightly.
     const minutes = this.elapsedMs / 60000;
-    const hp = 8 + Math.floor(this.elapsedMs / 15000);
-    const speed = 42 + minutes * 6;
-    enemy.spawn(x, y, hp, speed);
+    const baseHp = 8 + Math.floor(this.elapsedMs / 15000);
+    const baseSpeed = 42 + minutes * 6;
+    enemy.spawn(x, y, Math.max(1, Math.round(baseHp * type.hpMult)), baseSpeed * type.speedMult, type);
+  }
+
+  // Weighted roll over the types unlocked by the current run time.
+  private pickType(): EnemyType {
+    const minutes = this.elapsedMs / 60000;
+    let total = 0;
+    for (const t of this.typeList) {
+      if (t.spawnWeight > 0 && minutes >= t.minMinutes) total += t.spawnWeight;
+    }
+    if (total <= 0) return GRUNT;
+    let r = Math.random() * total;
+    for (const t of this.typeList) {
+      if (t.spawnWeight <= 0 || minutes < t.minMinutes) continue;
+      r -= t.spawnWeight;
+      if (r <= 0) return t;
+    }
+    return GRUNT;
+  }
+
+  // Spawns a dying enemy's offspring (splitter → spawnlings), if any.
+  splitOnDeath(enemy: Enemy): void {
+    const split = enemy.enemyType.splitInto;
+    if (!split) return;
+    const childType = ENEMY_TYPES[split.type];
+    if (!childType) return;
+    const ex = enemy.x;
+    const ey = enemy.y;
+    for (let i = 0; i < split.count; i++) {
+      const a = (i / split.count) * Math.PI * 2 + Math.random();
+      this.spawnType(ex + Math.cos(a) * 8, ey + Math.sin(a) * 8, childType);
+    }
   }
 
   // Pick a point just outside the island, in world pixels.

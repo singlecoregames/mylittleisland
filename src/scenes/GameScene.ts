@@ -78,7 +78,10 @@ export class GameScene extends Phaser.Scene {
       this.player,
       this.spawner.group,
       this.run,
-      (x, y) => this.xp.spawnGem(x, y, 1),
+      (enemy) => {
+        this.xp.spawnGem(enemy.x, enemy.y, enemy.enemyType.xp);
+        this.spawner.splitOnDeath(enemy);
+      },
     );
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
     this.structures = new StructureSystem(
