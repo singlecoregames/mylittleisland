@@ -72,9 +72,11 @@ export class GameScene extends Phaser.Scene {
       this.structures.addCredits(id, 1),
     );
 
-    // Starting weapon + a free first turret to place.
+    // Starting weapon + a free first turret, plus meta-granted structures.
     this.weapons.addOrUpgrade('spit');
-    this.structures.addCredits('cannon', 1);
+    this.structures.addCredits('cannon', 1 + bonuses.startCannons);
+    this.structures.addCredits('fence', bonuses.startFences);
+    this.structures.damageMult = 1 + bonuses.structureDamageMult;
 
     // Camera follows the frog but never shows beyond the island grid.
     this.cameras.main.setBounds(0, 0, this.island.worldWidth, this.island.worldHeight);

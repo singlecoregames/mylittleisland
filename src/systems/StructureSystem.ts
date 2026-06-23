@@ -24,6 +24,7 @@ export class StructureSystem {
   private credits = new Map<string, number>();
   buildMode = false;
   selectedId: string | null = null;
+  damageMult = 1; // meta "시설 강화" scales all structure damage
 
   constructor(
     private scene: Phaser.Scene,
@@ -147,7 +148,8 @@ export class StructureSystem {
     const angle = Math.atan2(target.y - s.y, target.x - s.x);
     const proj = this.projectiles.get(s.x, s.y) as Projectile | null;
     if (proj) {
-      proj.fire(s.x, s.y, Math.cos(angle) * speed, Math.sin(angle) * speed, s.def.damage ?? 6, 1);
+      const dmg = (s.def.damage ?? 6) * this.damageMult;
+      proj.fire(s.x, s.y, Math.cos(angle) * speed, Math.sin(angle) * speed, dmg, 1);
     }
     return true;
   }
@@ -171,7 +173,7 @@ export class StructureSystem {
     const now = this.scene.time.now;
     if (now < (this.fenceNextHit.get(enemy) ?? 0)) return;
     this.fenceNextHit.set(enemy, now + FENCE_HIT_INTERVAL);
-    this.weapons.damageEnemy(enemy, dmg);
+    this.weapons.damageEnemy(enemy, dmg * this.damageMult);
   };
 
   private nearestEnemy(x: number, y: number, maxDist: number): Enemy | null {

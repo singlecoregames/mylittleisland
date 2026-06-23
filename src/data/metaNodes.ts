@@ -5,7 +5,7 @@
 // Data-driven by design: adding a node here is enough to make it appear,
 // connect via `requires`, and contribute to the aggregated run bonuses.
 
-export type MetaCategory = 'island' | 'util' | 'attack' | 'survival' | 'active';
+export type MetaCategory = 'island' | 'util' | 'attack' | 'survival' | 'active' | 'structure';
 
 // All run-start bonuses are additive numbers; the run consumer decides how to
 // interpret each (e.g. islandTiles -> grid size, damageMult -> +fraction).
@@ -18,6 +18,9 @@ export interface MetaBonuses {
   pickupRadius: number; // px
   startXp: number; // XP granted at run start
   extraProjectiles: number;
+  startCannons: number; // turret build credits granted at run start
+  startFences: number; // fence build credits granted at run start
+  structureDamageMult: number; // added on top of base 1.0 for structures
 }
 
 export interface MetaNode {
@@ -154,6 +157,48 @@ export const META_NODES: MetaNode[] = [
     requires: ['util1'],
     effects: { startXp: 10 },
   },
+
+  // --- Structure branch (lower flanks) ------------------------------------
+  {
+    id: 'fac-cannon1',
+    name: '포탑 배치도',
+    description: '런 시작 시 수련 포탑 설치권 +1.',
+    category: 'structure',
+    cost: 12,
+    position: { x: 446, y: 248 },
+    requires: ['root'],
+    effects: { startCannons: 1 },
+  },
+  {
+    id: 'fac-cannon2',
+    name: '포탑 증설',
+    description: '런 시작 시 수련 포탑 설치권 +1.',
+    category: 'structure',
+    cost: 30,
+    position: { x: 540, y: 296 },
+    requires: ['fac-cannon1'],
+    effects: { startCannons: 1 },
+  },
+  {
+    id: 'fac-power',
+    name: '시설 강화',
+    description: '모든 시설 데미지 +30%.',
+    category: 'structure',
+    cost: 42,
+    position: { x: 636, y: 344 },
+    requires: ['fac-cannon2'],
+    effects: { structureDamageMult: 0.3 },
+  },
+  {
+    id: 'fac-fence1',
+    name: '울타리 배치도',
+    description: '런 시작 시 가시 울타리 설치권 +1.',
+    category: 'structure',
+    cost: 12,
+    position: { x: 194, y: 248 },
+    requires: ['root'],
+    effects: { startFences: 1 },
+  },
 ];
 
 export const META_BY_ID = new Map(META_NODES.map((n) => [n.id, n]));
@@ -171,6 +216,9 @@ export function emptyBonuses(): MetaBonuses {
     pickupRadius: 0,
     startXp: 0,
     extraProjectiles: 0,
+    startCannons: 0,
+    startFences: 0,
+    structureDamageMult: 0,
   };
 }
 
@@ -196,4 +244,5 @@ export const CATEGORY_COLOR: Record<MetaCategory, number> = {
   survival: 0x49c2ff,
   util: 0xffd166,
   active: 0xc77dff,
+  structure: 0xff9f43,
 };
