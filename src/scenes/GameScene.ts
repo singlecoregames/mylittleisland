@@ -6,6 +6,7 @@ import { WeaponSystem } from '../systems/WeaponSystem';
 import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { StructureSystem } from '../systems/StructureSystem';
+import { EnemyProjectileSystem } from '../systems/EnemyProjectileSystem';
 import { FlowField } from '../systems/FlowField';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -32,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   private xp!: XPSystem;
   private upgrades!: UpgradeSystem;
   private structures!: StructureSystem;
+  private enemyBullets!: EnemyProjectileSystem;
   private flow!: FlowField;
   private moveVec = new Phaser.Math.Vector2();
   private tapStart = new Phaser.Math.Vector2();
@@ -71,14 +73,20 @@ export class GameScene extends Phaser.Scene {
     const spawn = this.island.centerWorld;
     this.player = new Player(this, spawn.x, spawn.y, this.run);
     this.inputCtrl = new InputController(this);
-    this.spawner = new EnemySpawner(this, this.island);
+    this.enemyBullets = new EnemyProjectileSystem(this, this.player, this.run);
+    this.spawner = new EnemySpawner(this, this.island, (x, y, tx, ty, r) =>
+      this.enemyBullets.fireVolley(x, y, tx, ty, r),
+    );
 
     this.weapons = new WeaponSystem(
       this,
       this.player,
       this.spawner.group,
       this.run,
-      (x, y) => this.xp.spawnGem(x, y, 1),
+      (enemy) => {
+        this.xp.spawnGem(enemy.x, enemy.y, enemy.enemyType.xp);
+        this.spawner.splitOnDeath(enemy);
+      },
     );
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
     this.structures = new StructureSystem(
@@ -102,9 +110,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.island.worldWidth, this.island.worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
 
-    // Contact damage when an alien touches the frog.
-    this.physics.add.overlap(this.player, this.spawner.group, () => {
-      if (!this.dead) this.run.takeDamage(0.5);
+    // Contact damage when an alien touches the frog (per-type, default 0.5).
+    this.physics.add.overlap(this.player, this.spawner.group, (_p, enemy) => {
+      if (!this.dead) this.run.takeDamage((enemy as Enemy).enemyType.contactDmg ?? 0.5);
     });
 
     // Active skill (croak burst) fired from UIScene.

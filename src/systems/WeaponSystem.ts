@@ -30,7 +30,7 @@ export class WeaponSystem {
     private player: Player,
     private enemies: Phaser.Physics.Arcade.Group,
     private run: RunState,
-    private onKill: (x: number, y: number) => void,
+    private onKill: (enemy: Enemy) => void,
   ) {
     this.projectiles = scene.physics.add.group({
       classType: Projectile,
@@ -151,7 +151,7 @@ export class WeaponSystem {
   damageEnemy(enemy: Enemy, amount: number): void {
     if (!enemy.active) return;
     if (enemy.takeDamage(amount)) {
-      this.onKill(enemy.x, enemy.y);
+      this.onKill(enemy); // still active here: drop XP + spawn any offspring
       enemy.kill();
       this.run.kills += 1;
     }
