@@ -4,6 +4,10 @@ import type { IslandManager } from './IslandManager';
 
 const INF = 0x3fffffff;
 
+// Enemies start steering away from a structure once their center is within this
+// many px of its surface, so they slide along barricades instead of grinding in.
+const AVOID_RADIUS = 24;
+
 // 4-neighbour BFS integration field + 8-neighbour flow vectors over the island
 // grid. Water and placed blockers (fences) are impassable, so the field routes
 // enemies *around* obstacles toward the player instead of grinding against them.
@@ -13,6 +17,9 @@ export class FlowField {
   readonly cols: number;
   readonly rows: number;
   private blocked: Uint8Array;
+  // Structure blockers only (fences) — water is excluded so enemies can still
+  // wade ashore. Used for avoidance steering, separate from path blocking.
+  private structBlocked: Uint8Array;
   private dist: Int32Array;
   private flowX: Float32Array;
   private flowY: Float32Array;
@@ -24,6 +31,7 @@ export class FlowField {
     this.rows = island.rows;
     const n = this.cols * this.rows;
     this.blocked = new Uint8Array(n);
+    this.structBlocked = new Uint8Array(n);
     this.dist = new Int32Array(n);
     this.flowX = new Float32Array(n);
     this.flowY = new Float32Array(n);
@@ -47,7 +55,9 @@ export class FlowField {
   // Marks a tile impassable (e.g. a fence) and flags the field for recompute.
   markBlocked(col: number, row: number): void {
     if (this.inBounds(col, row)) {
-      this.blocked[this.idx(col, row)] = 1;
+      const i = this.idx(col, row);
+      this.blocked[i] = 1;
+      this.structBlocked[i] = 1;
       this.dirty = true;
     }
   }
@@ -146,5 +156,41 @@ export class FlowField {
       }
     }
     return out.set(dxp, dyp).normalize();
+  }
+
+  // Accumulated push away from nearby structure blockers (fences). Pushes from
+  // the closest point on each blocking tile, weighted by closeness, so enemies
+  // steer along a barricade rather than jamming into it. Water is ignored.
+  avoid(ex: number, ey: number, out: Phaser.Math.Vector2): Phaser.Math.Vector2 {
+    let ax = 0;
+    let ay = 0;
+    const c = Math.floor(ex / GAME.TILE);
+    const r = Math.floor(ey / GAME.TILE);
+    for (let rr = r - 1; rr <= r + 1; rr++) {
+      for (let cc = c - 1; cc <= c + 1; cc++) {
+        if (!this.inBounds(cc, rr) || !this.structBlocked[this.idx(cc, rr)]) continue;
+        const left = cc * GAME.TILE;
+        const top = rr * GAME.TILE;
+        // Closest point on the tile rectangle to the enemy centre.
+        const nx = Phaser.Math.Clamp(ex, left, left + GAME.TILE);
+        const ny = Phaser.Math.Clamp(ey, top, top + GAME.TILE);
+        let dx = ex - nx;
+        let dy = ey - ny;
+        let d2 = dx * dx + dy * dy;
+        if (d2 <= 1e-6) {
+          // On the edge/inside: fall back to pushing from the tile centre.
+          dx = ex - (left + GAME.TILE / 2);
+          dy = ey - (top + GAME.TILE / 2);
+          d2 = dx * dx + dy * dy;
+        }
+        if (d2 > 0 && d2 < AVOID_RADIUS * AVOID_RADIUS) {
+          const d = Math.sqrt(d2);
+          const w = (AVOID_RADIUS - d) / AVOID_RADIUS;
+          ax += (dx / d) * w;
+          ay += (dy / d) * w;
+        }
+      }
+    }
+    return out.set(ax, ay);
   }
 }
