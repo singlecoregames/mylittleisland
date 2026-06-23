@@ -31,6 +31,13 @@ export class EnemySpawner {
   constructor(
     scene: Phaser.Scene,
     private island: IslandManager,
+    private onEnemyFire: (
+      x: number,
+      y: number,
+      targetX: number,
+      targetY: number,
+      ranged: NonNullable<EnemyType['ranged']>,
+    ) => void,
   ) {
     this.group = scene.physics.add.group({
       classType: Enemy,
@@ -56,17 +63,40 @@ export class EnemySpawner {
       const e = child as Enemy;
       if (!e.active) return;
 
-      // Desired direction = flow-field heading toward the player + separation
-      // from neighbours + avoidance push off barricades. The enemy steers its
-      // own heading toward this gradually, so it isn't normalized here.
-      const dir = flow.sampleDir(e.x, e.y, targetX, targetY, this.steerVec);
+      // Crowd forces apply to every type: separation from neighbours +
+      // avoidance push off barricades.
       const sep = this.separation(e);
       const avoid = flow.avoid(e.x, e.y, this.avoidVec);
-      e.steerToward(
-        dir.x + sep.x * SEP_WEIGHT + avoid.x * AVOID_WEIGHT,
-        dir.y + sep.y * SEP_WEIGHT + avoid.y * AVOID_WEIGHT,
-        deltaMs,
-      );
+      const crowdX = sep.x * SEP_WEIGHT + avoid.x * AVOID_WEIGHT;
+      const crowdY = sep.y * SEP_WEIGHT + avoid.y * AVOID_WEIGHT;
+
+      // Ranged types hold at standoff range and fire instead of closing in.
+      const ranged = e.enemyType.ranged;
+      if (ranged) {
+        const dx = targetX - e.x;
+        const dy = targetY - e.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= ranged.range) {
+          let desX = crowdX;
+          let desY = crowdY;
+          if (dist > 0 && dist < ranged.range * 0.55) {
+            desX -= dx / dist; // too close: back off
+            desY -= dy / dist;
+          }
+          e.steerToward(desX, desY, deltaMs);
+          e.fireCooldownMs -= deltaMs;
+          if (e.fireCooldownMs <= 0) {
+            this.onEnemyFire(e.x, e.y, targetX, targetY, ranged);
+            e.fireCooldownMs = ranged.cooldownMs;
+          }
+          return;
+        }
+      }
+
+      // Default: follow the flow field toward the player. The enemy steers its
+      // own heading toward this gradually, so it isn't normalized here.
+      const dir = flow.sampleDir(e.x, e.y, targetX, targetY, this.steerVec);
+      e.steerToward(dir.x + crowdX, dir.y + crowdY, deltaMs);
     });
   }
 

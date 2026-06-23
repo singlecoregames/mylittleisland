@@ -13,6 +13,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   speed = 45;
   hp = 10;
   knockbackMs = 0; // while > 0, chase() yields to knockback velocity
+  fireCooldownMs = 0; // ranged types: time until the next shot
   enemyType: EnemyType = GRUNT;
   private knockbackResist = 0;
   private turnRate = DEFAULT_TURN_RATE;
@@ -37,6 +38,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.headingX = 0; // re-aligns on the first steer
     this.headingY = 0;
     this.enemyType = type;
+    // Stagger ranged openers so a wave doesn't volley in unison.
+    this.fireCooldownMs = type.ranged ? Math.random() * type.ranged.cooldownMs : 0;
     this.knockbackResist = type.knockbackResist;
     this.turnRate = type.turnRate ?? DEFAULT_TURN_RATE;
     this.setTexture(enemyTexKey(type.id));
@@ -56,23 +59,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     const dlen = Math.hypot(desiredX, desiredY);
-    if (dlen > 1e-4) {
-      const dx = desiredX / dlen;
-      const dy = desiredY / dlen;
-      if (this.headingX === 0 && this.headingY === 0) {
-        // First frame after spawn: adopt the direction immediately.
-        this.headingX = dx;
-        this.headingY = dy;
-      } else {
-        const t = Math.min(1, (this.turnRate * deltaMs) / 1000);
-        this.headingX += (dx - this.headingX) * t;
-        this.headingY += (dy - this.headingY) * t;
-        const hlen = Math.hypot(this.headingX, this.headingY) || 1;
-        this.headingX /= hlen;
-        this.headingY /= hlen;
-      }
+    if (dlen <= 1e-4) {
+      // No desired direction (e.g. a ranged type holding station): stop.
+      this.setVelocity(0, 0);
+      return;
     }
-    // If there's no desired direction, coast along the current heading.
+    const dx = desiredX / dlen;
+    const dy = desiredY / dlen;
+    if (this.headingX === 0 && this.headingY === 0) {
+      // First frame after spawn: adopt the direction immediately.
+      this.headingX = dx;
+      this.headingY = dy;
+    } else {
+      const t = Math.min(1, (this.turnRate * deltaMs) / 1000);
+      this.headingX += (dx - this.headingX) * t;
+      this.headingY += (dy - this.headingY) * t;
+      const hlen = Math.hypot(this.headingX, this.headingY) || 1;
+      this.headingX /= hlen;
+      this.headingY /= hlen;
+    }
     this.setVelocity(this.headingX * this.speed, this.headingY * this.speed);
   }
 

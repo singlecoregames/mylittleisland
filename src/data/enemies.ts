@@ -14,6 +14,8 @@ export interface EnemyType {
   spawnWeight: number; // relative natural-spawn weight (0 = never rolled)
   minMinutes: number; // earliest run time (minutes) this type can appear
   splitInto?: { type: string; count: number }; // children spawned on death
+  // Ranged attacker: holds at `range`, fires a bullet every `cooldownMs`.
+  ranged?: { range: number; cooldownMs: number; projectileSpeed: number; damage: number };
 }
 
 export const ENEMY_TYPES: Record<string, EnemyType> = {
@@ -67,6 +69,19 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     spawnWeight: 30,
     minMinutes: 1,
     splitInto: { type: 'spawnling', count: 3 },
+  },
+  // Ranged attacker: hangs back and lobs bullets at the frog.
+  ranger: {
+    id: 'ranger',
+    color: 0x42a5f5,
+    scale: 1,
+    hpMult: 1.3,
+    speedMult: 0.85,
+    knockbackResist: 0,
+    xp: 3,
+    spawnWeight: 28,
+    minMinutes: 2,
+    ranged: { range: 150, cooldownMs: 1600, projectileSpeed: 160, damage: 6 },
   },
   // Splitter offspring — small, quick, never rolled naturally.
   spawnling: {

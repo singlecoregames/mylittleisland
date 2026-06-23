@@ -6,6 +6,7 @@ import { WeaponSystem } from '../systems/WeaponSystem';
 import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { StructureSystem } from '../systems/StructureSystem';
+import { EnemyProjectileSystem } from '../systems/EnemyProjectileSystem';
 import { FlowField } from '../systems/FlowField';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -32,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   private xp!: XPSystem;
   private upgrades!: UpgradeSystem;
   private structures!: StructureSystem;
+  private enemyBullets!: EnemyProjectileSystem;
   private flow!: FlowField;
   private moveVec = new Phaser.Math.Vector2();
   private tapStart = new Phaser.Math.Vector2();
@@ -71,7 +73,10 @@ export class GameScene extends Phaser.Scene {
     const spawn = this.island.centerWorld;
     this.player = new Player(this, spawn.x, spawn.y, this.run);
     this.inputCtrl = new InputController(this);
-    this.spawner = new EnemySpawner(this, this.island);
+    this.enemyBullets = new EnemyProjectileSystem(this, this.player, this.run);
+    this.spawner = new EnemySpawner(this, this.island, (x, y, tx, ty, r) =>
+      this.enemyBullets.fire(x, y, tx, ty, r.projectileSpeed, r.damage),
+    );
 
     this.weapons = new WeaponSystem(
       this,
