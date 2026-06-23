@@ -8,16 +8,23 @@ export interface LevelUpData {
 }
 
 // Pause overlay: dims the run and presents the 3-choice upgrade cards. Calls
-// back into GameScene with the picked choice, which applies it and resumes.
+// back into GameScene with the picked choice. The scene is launched once and
+// refreshed via showChoices() for each queued level-up (restarting the scene
+// mid-tick was unreliable on the web).
 export class LevelUpScene extends Phaser.Scene {
+  private onPick!: (choice: UpgradeChoice) => void;
+  private cardObjects: Phaser.GameObjects.GameObject[] = [];
+
   constructor() {
     super('LevelUp');
   }
 
   create(data: LevelUpData): void {
-    const { choices, onPick } = data;
+    this.onPick = data.onPick;
 
-    // Full-screen dim that also blocks input to the scenes beneath.
+    // Full-screen dim that also blocks input to the scenes beneath. Topmost
+    // scene wins input, so this keeps stray HUD taps from leaking through.
+    this.input.topOnly = true;
     this.add
       .rectangle(0, 0, GAME.WIDTH, GAME.HEIGHT, 0x000000, 0.6)
       .setOrigin(0, 0)
@@ -31,6 +38,14 @@ export class LevelUpScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    this.showChoices(data.choices);
+  }
+
+  // Replaces the current cards with a fresh set (used for queued level-ups).
+  showChoices(choices: UpgradeChoice[]): void {
+    this.cardObjects.forEach((o) => o.destroy());
+    this.cardObjects = [];
+
     const cardW = 184;
     const cardH = 200;
     const gap = 14;
@@ -40,7 +55,7 @@ export class LevelUpScene extends Phaser.Scene {
 
     choices.forEach((choice, i) => {
       const x = startX + i * (cardW + gap);
-      this.createCard(x, y, cardW, cardH, choice, () => onPick(choice));
+      this.createCard(x, y, cardW, cardH, choice, () => this.onPick(choice));
     });
   }
 
@@ -60,9 +75,9 @@ export class LevelUpScene extends Phaser.Scene {
       .setStrokeStyle(2, color)
       .setInteractive({ useHandCursor: true });
 
-    this.add.rectangle(x, y, w, 6, color).setOrigin(0, 0);
+    const stripe = this.add.rectangle(x, y, w, 6, color).setOrigin(0, 0);
 
-    this.add
+    const name = this.add
       .text(x + w / 2, y + 30, choice.name, {
         fontFamily: 'monospace',
         fontSize: '15px',
@@ -72,7 +87,7 @@ export class LevelUpScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0);
 
-    this.add
+    const desc = this.add
       .text(x + w / 2, y + h - 60, choice.desc, {
         fontFamily: 'monospace',
         fontSize: '11px',
@@ -82,7 +97,7 @@ export class LevelUpScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0.5);
 
-    this.add
+    const label = this.add
       .text(x + w / 2, y + h - 18, this.categoryLabel(choice.category), {
         fontFamily: 'monospace',
         fontSize: '10px',
@@ -92,7 +107,10 @@ export class LevelUpScene extends Phaser.Scene {
 
     bg.on(Phaser.Input.Events.POINTER_OVER, () => bg.setFillStyle(0x27345c, 1));
     bg.on(Phaser.Input.Events.POINTER_OUT, () => bg.setFillStyle(0x1b2440, 1));
-    bg.on(Phaser.Input.Events.POINTER_DOWN, onSelect);
+    // `once` so a single card can't fire twice before the cards are rebuilt.
+    bg.once(Phaser.Input.Events.POINTER_DOWN, onSelect);
+
+    this.cardObjects.push(bg, stripe, name, desc, label);
   }
 
   private categoryColor(category: UpgradeChoice['category']): number {

@@ -25,15 +25,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setTint(0xffffff);
   }
 
-  // Drives movement; respects an active knockback window. Returns nothing.
-  tick(deltaMs: number, targetX: number, targetY: number): void {
+  // Moves along a precomputed direction (e.g. a flow-field vector). Respects an
+  // active knockback window (keeps the knockback velocity until it expires).
+  steer(dirX: number, dirY: number, deltaMs: number): void {
     if (!this.active) return;
     if (this.knockbackMs > 0) {
       this.knockbackMs -= deltaMs;
-      return; // keep the knockback velocity this frame
+      return;
     }
-    const angle = Math.atan2(targetY - this.y, targetX - this.x);
-    this.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+    this.setVelocity(dirX * this.speed, dirY * this.speed);
   }
 
   knockback(fromX: number, fromY: number, force: number, durationMs: number): void {

@@ -1,18 +1,22 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS } from '../config';
+import { GAME, SCENE_KEYS } from '../config';
 import { IslandManager } from '../systems/IslandManager';
 import { EnemySpawner } from '../systems/EnemySpawner';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { StructureSystem } from '../systems/StructureSystem';
+import { FlowField } from '../systems/FlowField';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { InputController } from '../core/InputController';
 import { RunState } from '../state/RunState';
 import { SaveManager } from '../core/SaveManager';
 import { aggregateBonuses } from '../data/metaNodes';
-import type { LevelUpData } from './LevelUpScene';
+import type { LevelUpScene, LevelUpData } from './LevelUpScene';
+
+// Recompute the flow field at most this often (ms) even if the goal keeps moving.
+const FLOW_RECOMPUTE_MS = 120;
 
 // Base island dimension (tiles per side) before meta expansion is applied.
 const BASE_ISLAND = 14;
@@ -28,9 +32,13 @@ export class GameScene extends Phaser.Scene {
   private xp!: XPSystem;
   private upgrades!: UpgradeSystem;
   private structures!: StructureSystem;
+  private flow!: FlowField;
   private moveVec = new Phaser.Math.Vector2();
   private tapStart = new Phaser.Math.Vector2();
   private buildModeAt = 0;
+  private flowAccumMs = 0;
+  private goalCol = -1;
+  private goalRow = -1;
 
   private pendingLevelUps = 0;
   private levelUpActive = false;
@@ -54,6 +62,8 @@ export class GameScene extends Phaser.Scene {
     const side = BASE_ISLAND + bonuses.islandTiles;
     this.island = new IslandManager(this, side, side);
 
+    this.flow = new FlowField(this.island);
+
     const spawn = this.island.centerWorld;
     this.player = new Player(this, spawn.x, spawn.y, this.run);
     this.inputCtrl = new InputController(this);
@@ -67,7 +77,13 @@ export class GameScene extends Phaser.Scene {
       (x, y) => this.xp.spawnGem(x, y, 1),
     );
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
-    this.structures = new StructureSystem(this, this.island, this.spawner.group, this.weapons);
+    this.structures = new StructureSystem(
+      this,
+      this.island,
+      this.spawner.group,
+      this.weapons,
+      this.flow,
+    );
     this.upgrades = new UpgradeSystem(this.run, this.weapons, (id) =>
       this.structures.addCredits(id, 1),
     );
@@ -131,31 +147,36 @@ export class GameScene extends Phaser.Scene {
   }
 
   // --- Level-up overlay flow ---------------------------------------------
+  // The overlay scene is launched once and then *refreshed* in place for each
+  // queued level-up. Restarting the same scene within a single tick (stop +
+  // launch) was unreliable on the web and could leave cards unclickable.
 
   private queueLevelUps(count: number): void {
     this.pendingLevelUps += count;
-    if (!this.levelUpActive) this.openLevelUp();
+    if (!this.levelUpActive && this.pendingLevelUps > 0) this.beginLevelUp();
   }
 
-  private openLevelUp(): void {
-    if (this.pendingLevelUps <= 0) {
-      this.levelUpActive = false;
-      this.scene.resume();
-      return;
-    }
-    this.pendingLevelUps -= 1;
+  private beginLevelUp(): void {
     this.levelUpActive = true;
-    if (!this.scene.isPaused()) this.scene.pause();
-
+    this.scene.pause();
     const data: LevelUpData = {
       choices: this.upgrades.getChoices(3),
-      onPick: (choice) => {
-        this.upgrades.apply(choice);
-        this.scene.stop('LevelUp');
-        this.openLevelUp(); // show next queued card, or resume if none
-      },
+      onPick: (choice) => this.onUpgradePicked(choice),
     };
     this.scene.launch('LevelUp', data);
+  }
+
+  private onUpgradePicked(choice: Parameters<UpgradeSystem['apply']>[0]): void {
+    this.upgrades.apply(choice);
+    this.pendingLevelUps -= 1;
+    if (this.pendingLevelUps > 0) {
+      // Show the next queued card set without tearing the scene down.
+      (this.scene.get('LevelUp') as LevelUpScene).showChoices(this.upgrades.getChoices(3));
+    } else {
+      this.levelUpActive = false;
+      this.scene.stop('LevelUp');
+      this.scene.resume();
+    }
   }
 
   // --- Game over ----------------------------------------------------------
@@ -181,7 +202,21 @@ export class GameScene extends Phaser.Scene {
 
     const dir = this.inputCtrl.getMoveVector(this.moveVec);
     this.player.move(dir, this.island, dt);
-    this.spawner.update(delta, this.player.x, this.player.y);
+
+    // Refresh the flow field when the player changes tile or a blocker appears.
+    const gc = Math.floor(this.player.x / GAME.TILE);
+    const gr = Math.floor(this.player.y / GAME.TILE);
+    this.flowAccumMs += delta;
+    if (this.flow.dirty || gc !== this.goalCol || gr !== this.goalRow) {
+      if (this.flowAccumMs >= FLOW_RECOMPUTE_MS || this.goalCol < 0) {
+        this.flow.compute(gc, gr);
+        this.goalCol = gc;
+        this.goalRow = gr;
+        this.flowAccumMs = 0;
+      }
+    }
+
+    this.spawner.update(delta, this.flow, this.player.x, this.player.y);
     this.weapons.update(delta);
     this.structures.update(delta);
     this.xp.update();

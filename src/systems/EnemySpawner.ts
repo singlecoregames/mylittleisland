@@ -1,14 +1,17 @@
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import type { IslandManager } from '../systems/IslandManager';
+import type { FlowField } from './FlowField';
 
-// Spawns aliens at the island's water edge on a timer and drives their chase.
-// Difficulty (spawn rate + enemy HP) ramps with elapsed run time. Pooled.
+// Spawns aliens at the island's water edge on a timer and drives their chase
+// along the flow field (so they route around fences). Difficulty (spawn rate +
+// enemy HP) ramps with elapsed run time. Pooled.
 export class EnemySpawner {
   readonly group: Phaser.Physics.Arcade.Group;
   private accumMs = 0;
   private intervalMs = 1100;
   private elapsedMs = 0;
+  private steerVec = new Phaser.Math.Vector2();
 
   constructor(
     scene: Phaser.Scene,
@@ -21,7 +24,7 @@ export class EnemySpawner {
     });
   }
 
-  update(deltaMs: number, targetX: number, targetY: number): void {
+  update(deltaMs: number, flow: FlowField, targetX: number, targetY: number): void {
     this.elapsedMs += deltaMs;
 
     this.accumMs += deltaMs;
@@ -33,7 +36,10 @@ export class EnemySpawner {
     this.intervalMs = Math.max(320, this.intervalMs - deltaMs * 0.012);
 
     this.group.getChildren().forEach((child) => {
-      (child as Enemy).tick(deltaMs, targetX, targetY);
+      const e = child as Enemy;
+      if (!e.active) return;
+      const dir = flow.sampleDir(e.x, e.y, targetX, targetY, this.steerVec);
+      e.steer(dir.x, dir.y, deltaMs);
     });
   }
 

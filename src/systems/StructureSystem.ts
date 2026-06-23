@@ -6,6 +6,7 @@ import { Enemy } from '../entities/Enemy';
 import { STRUCTURES, type StructureDef } from '../data/structures';
 import type { IslandManager } from './IslandManager';
 import type { WeaponSystem } from './WeaponSystem';
+import type { FlowField } from './FlowField';
 
 const FENCE_HIT_INTERVAL = 300; // ms between contact-damage ticks per enemy
 
@@ -31,6 +32,7 @@ export class StructureSystem {
     private island: IslandManager,
     private enemies: Phaser.Physics.Arcade.Group,
     private weapons: WeaponSystem,
+    private flow: FlowField,
   ) {
     this.projectiles = scene.physics.add.group({
       classType: Projectile,
@@ -98,8 +100,11 @@ export class StructureSystem {
 
     const cx = col * GAME.TILE + GAME.TILE / 2;
     const cy = row * GAME.TILE + GAME.TILE / 2;
-    this.placeStructure(STRUCTURES[id], cx, cy);
+    const def = STRUCTURES[id];
+    this.placeStructure(def, cx, cy);
     this.occupied.add(key);
+    // Fences are solid, so they reshape enemy pathing.
+    if (def.kind === 'fence') this.flow.markBlocked(col, row);
 
     this.addCredits(id, -1);
     if (this.creditsOf(id) <= 0) this.setBuildMode(false);
