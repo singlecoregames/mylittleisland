@@ -8,6 +8,8 @@ import type { FlowField } from './FlowField';
 // spread out instead of stacking on one tile.
 const SEP_RADIUS = 22;
 const SEP_WEIGHT = 0.9;
+// How strongly barricade avoidance bends the heading (relative to the unit flow).
+const AVOID_WEIGHT = 1.4;
 const CELL = SEP_RADIUS; // spatial-hash cell size == neighbour radius
 const CELL_BIAS = 1024; // keeps hashed cell coords non-negative
 
@@ -20,6 +22,7 @@ export class EnemySpawner {
   private intervalMs = 1100;
   private elapsedMs = 0;
   private steerVec = new Phaser.Math.Vector2();
+  private avoidVec = new Phaser.Math.Vector2();
   // Spatial hash of active enemies, rebuilt each frame (arrays reused).
   private grid = new Map<number, Enemy[]>();
 
@@ -52,11 +55,16 @@ export class EnemySpawner {
       if (!e.active) return;
 
       // Desired direction = flow-field heading toward the player + separation
-      // push from neighbours. The enemy steers its own heading toward this
-      // gradually, so it isn't normalized here.
+      // from neighbours + avoidance push off barricades. The enemy steers its
+      // own heading toward this gradually, so it isn't normalized here.
       const dir = flow.sampleDir(e.x, e.y, targetX, targetY, this.steerVec);
       const sep = this.separation(e);
-      e.steerToward(dir.x + sep.x * SEP_WEIGHT, dir.y + sep.y * SEP_WEIGHT, deltaMs);
+      const avoid = flow.avoid(e.x, e.y, this.avoidVec);
+      e.steerToward(
+        dir.x + sep.x * SEP_WEIGHT + avoid.x * AVOID_WEIGHT,
+        dir.y + sep.y * SEP_WEIGHT + avoid.y * AVOID_WEIGHT,
+        deltaMs,
+      );
     });
   }
 

@@ -49,6 +49,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The Arcade physics world persists across scene restarts, so a prior run's
+    // gameOver() pause would otherwise leave the next run frozen. Clear it.
+    this.physics.resume();
+
     this.run = new RunState();
     this.pendingLevelUps = 0;
     this.levelUpActive = false;
