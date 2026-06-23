@@ -11,8 +11,6 @@ export interface EnemyType {
   turnRate?: number; // steering responsiveness override (default in Enemy)
   knockbackResist: number; // 0..1 fraction of knockback force/duration ignored
   xp: number; // gem value dropped on death
-  spawnWeight: number; // relative natural-spawn weight (0 = never rolled)
-  minMinutes: number; // earliest run time (minutes) this type can appear
   contactDmg?: number; // per-overlap-frame damage to the player (default 0.5)
   isBoss?: boolean; // scheduled separately + draws an HP bar
   splitInto?: { type: string; count: number }; // children spawned on death
@@ -40,8 +38,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     speedMult: 1,
     knockbackResist: 0,
     xp: 1,
-    spawnWeight: 100,
-    minMinutes: 0,
   },
   // Fast, fragile, banks hard — rushes the frog.
   charger: {
@@ -53,8 +49,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     turnRate: 9,
     knockbackResist: 0,
     xp: 1,
-    spawnWeight: 45,
-    minMinutes: 0.5,
   },
   // Slow, tough, shrugs off knockback — a wall that soaks damage.
   tank: {
@@ -66,8 +60,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     turnRate: 3,
     knockbackResist: 0.85,
     xp: 4,
-    spawnWeight: 22,
-    minMinutes: 1.5,
   },
   // Bursts into a few spawnlings on death.
   splitter: {
@@ -78,8 +70,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     speedMult: 0.9,
     knockbackResist: 0.2,
     xp: 2,
-    spawnWeight: 30,
-    minMinutes: 1,
     splitInto: { type: 'spawnling', count: 3 },
   },
   // Ranged attacker: hangs back and lobs bullets at the frog.
@@ -91,8 +81,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     speedMult: 0.85,
     knockbackResist: 0,
     xp: 3,
-    spawnWeight: 28,
-    minMinutes: 2,
     ranged: { range: 150, cooldownMs: 1600, projectileSpeed: 160, damage: 6 },
   },
   // Elite boss — scheduled on a timer, not rolled. Huge, slow, knockback-proof,
@@ -108,8 +96,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     contactDmg: 1,
     isBoss: true,
     xp: 30,
-    spawnWeight: 0,
-    minMinutes: 0,
     ranged: {
       range: 240,
       cooldownMs: 2400,
@@ -129,8 +115,6 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     speedMult: 1.25,
     knockbackResist: 0,
     xp: 1,
-    spawnWeight: 0,
-    minMinutes: 0,
   },
 };
 
