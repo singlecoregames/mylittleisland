@@ -95,6 +95,22 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.fillStyle(0x3a3a3a, 1);
     g.fillCircle(T / 2, T / 2, 5);
   });
+
+  // --- Reed Fence: a clump of spiky reeds filling the tile ---
+  drawTexture(scene, TEX.FENCE, T, T, (g) => {
+    g.fillStyle(0x6b4a2a, 1);
+    g.fillRect(3, T - 8, T - 6, 6);
+    g.fillStyle(0x3f7d2c, 1);
+    for (let i = 0; i < 5; i++) {
+      const x = 5 + i * 5.5;
+      g.fillTriangle(x, T - 4, x + 4, T - 4, x + 2, 4 + (i % 2) * 4);
+    }
+    g.fillStyle(0xcfe66a, 1);
+    for (let i = 0; i < 5; i++) {
+      const x = 5 + i * 5.5;
+      g.fillTriangle(x + 1.4, 7 + (i % 2) * 4, x + 2.6, 7 + (i % 2) * 4, x + 2, 4 + (i % 2) * 4);
+    }
+  });
 }
 
 function drawTexture(

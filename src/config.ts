@@ -26,4 +26,5 @@ export const TEX = {
   JOY_THUMB: 'tex-joy-thumb',
   SKILL_BTN: 'tex-skill-btn',
   CANNON: 'tex-cannon',
+  FENCE: 'tex-fence',
 } as const;

@@ -20,7 +20,7 @@ export class UpgradeSystem {
   constructor(
     private run: RunState,
     private weapons: WeaponSystem,
-    private grantBuildCredit: () => void,
+    private grantBuildCredit: (structureId: string) => void,
   ) {}
 
   apply(choice: UpgradeChoice): void {
@@ -149,7 +149,15 @@ export class UpgradeSystem {
         desc: '빌드 버튼으로 땅에 자동 포탑을 1개 설치',
         category: 'structure',
         weight: 5,
-        apply: () => this.grantBuildCredit(),
+        apply: () => this.grantBuildCredit('cannon'),
+      },
+      {
+        id: 'struct-fence',
+        name: '가시 울타리 설치권',
+        desc: '적을 막고 접촉 피해를 주는 울타리 1개 설치',
+        category: 'structure',
+        weight: 5,
+        apply: () => this.grantBuildCredit('fence'),
       },
     );
 

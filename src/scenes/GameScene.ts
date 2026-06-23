@@ -68,13 +68,13 @@ export class GameScene extends Phaser.Scene {
     );
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
     this.structures = new StructureSystem(this, this.island, this.spawner.group, this.weapons);
-    this.upgrades = new UpgradeSystem(this.run, this.weapons, () =>
-      this.structures.addCredits(1),
+    this.upgrades = new UpgradeSystem(this.run, this.weapons, (id) =>
+      this.structures.addCredits(id, 1),
     );
 
     // Starting weapon + a free first turret to place.
     this.weapons.addOrUpgrade('spit');
-    this.structures.addCredits(1);
+    this.structures.addCredits('cannon', 1);
 
     // Camera follows the frog but never shows beyond the island grid.
     this.cameras.main.setBounds(0, 0, this.island.worldWidth, this.island.worldHeight);
@@ -113,8 +113,8 @@ export class GameScene extends Phaser.Scene {
     if (bonuses.startXp > 0) this.queueLevelUps(this.run.addXp(bonuses.startXp));
   }
 
-  private onToggleBuild(): void {
-    this.structures.toggleBuildMode();
+  private onToggleBuild(structureId: string): void {
+    this.structures.toggleBuildMode(structureId);
     if (this.structures.buildMode) this.buildModeAt = this.time.now;
   }
 
@@ -200,7 +200,8 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('xpToNext', this.run.xpToNext);
     this.registry.set('timeMs', this.run.timeMs);
     this.registry.set('kills', this.run.kills);
-    this.registry.set('buildCredits', this.structures.credits);
+    this.registry.set('buildCredits', this.structures.creditSnapshot());
     this.registry.set('buildMode', this.structures.buildMode);
+    this.registry.set('buildSelected', this.structures.selectedId);
   }
 }

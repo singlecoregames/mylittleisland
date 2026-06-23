@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME, SCENE_KEYS } from '../config';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 import { SkillButton } from '../ui/SkillButton';
+import { BUILDABLE_IDS, STRUCTURES } from '../data/structures';
 
 // Screen-space overlay: HP/XP bars, level, timer, kills, virtual joystick, and
 // the skill button. Runs in parallel above GameScene; communicates via the
@@ -11,8 +12,11 @@ export class UIScene extends Phaser.Scene {
   private skillButton!: SkillButton;
   private bars!: Phaser.GameObjects.Graphics;
   private statusText!: Phaser.GameObjects.Text;
-  private buildBg!: Phaser.GameObjects.Rectangle;
-  private buildText!: Phaser.GameObjects.Text;
+  private buildButtons: {
+    id: string;
+    bg: Phaser.GameObjects.Rectangle;
+    text: Phaser.GameObjects.Text;
+  }[] = [];
 
   constructor() {
     super(SCENE_KEYS.UI);
@@ -29,25 +33,25 @@ export class UIScene extends Phaser.Scene {
       () => this.game.events.emit('skill'),
     );
 
-    // Build button (above the skill button): toggles structure placement mode.
-    this.buildBg = this.add
-      .rectangle(GAME.WIDTH - 44, GAME.HEIGHT - 104, 58, 28, 0x2c7d3a, 0.85)
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setStrokeStyle(2, 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
-    this.buildText = this.add
-      .text(GAME.WIDTH - 44, GAME.HEIGHT - 104, '설치 0', {
-        fontFamily: 'monospace',
-        fontSize: '11px',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(1001);
-    this.buildBg.on(Phaser.Input.Events.POINTER_DOWN, () =>
-      this.game.events.emit('toggleBuild'),
-    );
+    // Build buttons (above the skill button): one per structure type. Tapping
+    // toggles placement mode for that type.
+    BUILDABLE_IDS.forEach((id, i) => {
+      const x = GAME.WIDTH - 44 - i * 64;
+      const y = GAME.HEIGHT - 104;
+      const bg = this.add
+        .rectangle(x, y, 60, 28, 0x2c7d3a, 0.85)
+        .setScrollFactor(0)
+        .setDepth(1000)
+        .setStrokeStyle(2, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      const text = this.add
+        .text(x, y, '', { fontFamily: 'monospace', fontSize: '10px', color: '#ffffff' })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(1001);
+      bg.on(Phaser.Input.Events.POINTER_DOWN, () => this.game.events.emit('toggleBuild', id));
+      this.buildButtons.push({ id, bg, text });
+    });
 
     this.bars = this.add.graphics().setScrollFactor(0).setDepth(900);
 
@@ -73,14 +77,20 @@ export class UIScene extends Phaser.Scene {
   }
 
   private drawBuildButton(): void {
-    const credits = (this.registry.get('buildCredits') as number) ?? 0;
-    const active = (this.registry.get('buildMode') as boolean) ?? false;
-    this.buildText.setText(`설치 ${credits}`);
+    const credits = (this.registry.get('buildCredits') as Record<string, number>) ?? {};
+    const buildMode = (this.registry.get('buildMode') as boolean) ?? false;
+    const selected = this.registry.get('buildSelected') as string | null;
 
-    // Dim when nothing to place; highlight while placement mode is on.
-    this.buildBg.setAlpha(credits > 0 ? 0.9 : 0.4);
-    this.buildBg.setFillStyle(active ? 0x49b85c : 0x2c7d3a, 0.9);
-    this.buildBg.setStrokeStyle(2, 0xffffff, active ? 0.9 : 0);
+    for (const b of this.buildButtons) {
+      const count = credits[b.id] ?? 0;
+      b.text.setText(`${STRUCTURES[b.id].label} ${count}`);
+
+      // Dim when nothing to place; highlight the active placement type.
+      const isActive = buildMode && selected === b.id;
+      b.bg.setAlpha(count > 0 ? 0.9 : 0.4);
+      b.bg.setFillStyle(isActive ? 0x49b85c : 0x2c7d3a, 0.9);
+      b.bg.setStrokeStyle(2, 0xffffff, isActive ? 0.9 : 0);
+    }
   }
 
   private drawBars(): void {
