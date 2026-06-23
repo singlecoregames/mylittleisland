@@ -5,6 +5,7 @@ import { EnemySpawner } from '../systems/EnemySpawner';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
+import { StructureSystem } from '../systems/StructureSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { InputController } from '../core/InputController';
@@ -26,7 +27,10 @@ export class GameScene extends Phaser.Scene {
   private weapons!: WeaponSystem;
   private xp!: XPSystem;
   private upgrades!: UpgradeSystem;
+  private structures!: StructureSystem;
   private moveVec = new Phaser.Math.Vector2();
+  private tapStart = new Phaser.Math.Vector2();
+  private buildModeAt = 0;
 
   private pendingLevelUps = 0;
   private levelUpActive = false;
@@ -63,10 +67,14 @@ export class GameScene extends Phaser.Scene {
       (x, y) => this.xp.spawnGem(x, y, 1),
     );
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
-    this.upgrades = new UpgradeSystem(this.run, this.weapons);
+    this.structures = new StructureSystem(this, this.island, this.spawner.group, this.weapons);
+    this.upgrades = new UpgradeSystem(this.run, this.weapons, () =>
+      this.structures.addCredits(1),
+    );
 
-    // Starting weapon.
+    // Starting weapon + a free first turret to place.
     this.weapons.addOrUpgrade('spit');
+    this.structures.addCredits(1);
 
     // Camera follows the frog but never shows beyond the island grid.
     this.cameras.main.setBounds(0, 0, this.island.worldWidth, this.island.worldHeight);
@@ -79,8 +87,23 @@ export class GameScene extends Phaser.Scene {
 
     // Active skill (croak burst) fired from UIScene.
     this.game.events.on('skill', this.onSkill, this);
+    // Build button (UIScene) toggles structure placement mode.
+    this.game.events.on('toggleBuild', this.onToggleBuild, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('skill', this.onSkill, this);
+      this.game.events.off('toggleBuild', this.onToggleBuild, this);
+    });
+
+    // Tap-to-place: record the tap origin, then place on release if it was a
+    // tap (not a joystick drag) and not the same tap that opened build mode.
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
+      this.tapStart.set(p.x, p.y);
+    });
+    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => {
+      if (this.dead || !this.structures.buildMode) return;
+      if (this.time.now - this.buildModeAt < 250) return;
+      if (Phaser.Math.Distance.Between(p.x, p.y, this.tapStart.x, this.tapStart.y) > 12) return;
+      this.structures.tryPlaceAtWorld(p.worldX, p.worldY);
     });
 
     // HUD/touch overlay on top of this scene.
@@ -88,6 +111,11 @@ export class GameScene extends Phaser.Scene {
 
     // Meta "early growth" start XP — may immediately open a level-up card.
     if (bonuses.startXp > 0) this.queueLevelUps(this.run.addXp(bonuses.startXp));
+  }
+
+  private onToggleBuild(): void {
+    this.structures.toggleBuildMode();
+    if (this.structures.buildMode) this.buildModeAt = this.time.now;
   }
 
   private onSkill(): void {
@@ -153,7 +181,11 @@ export class GameScene extends Phaser.Scene {
     this.player.move(dir, this.island, dt);
     this.spawner.update(delta, this.player.x, this.player.y);
     this.weapons.update(delta);
+    this.structures.update(delta);
     this.xp.update();
+
+    const pointer = this.input.activePointer;
+    this.structures.updateGhost(pointer.worldX, pointer.worldY);
 
     this.publishHud();
 
@@ -168,5 +200,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('xpToNext', this.run.xpToNext);
     this.registry.set('timeMs', this.run.timeMs);
     this.registry.set('kills', this.run.kills);
+    this.registry.set('buildCredits', this.structures.credits);
+    this.registry.set('buildMode', this.structures.buildMode);
   }
 }

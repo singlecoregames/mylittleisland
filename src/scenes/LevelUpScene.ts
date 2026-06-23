@@ -103,6 +103,8 @@ export class LevelUpScene extends Phaser.Scene {
         return 0xff7a5f;
       case 'passive':
         return 0x6fcf4f;
+      case 'structure':
+        return 0x33dd55;
     }
   }
 
@@ -114,6 +116,8 @@ export class LevelUpScene extends Phaser.Scene {
         return '무기 강화';
       case 'passive':
         return '패시브';
+      case 'structure':
+        return '시설';
     }
   }
 }

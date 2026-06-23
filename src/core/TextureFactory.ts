@@ -83,6 +83,18 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.lineStyle(2, 0xffffff, 0.6);
     g.strokeCircle(btnR, btnR, btnR - 1);
   });
+
+  // --- Lily Cannon turret: lily-pad base + barrel, fits inside a tile ---
+  drawTexture(scene, TEX.CANNON, T, T, (g) => {
+    g.fillStyle(0x2c7d3a, 1);
+    g.fillCircle(T / 2, T / 2, 13);
+    g.fillStyle(0x49b85c, 1);
+    g.fillCircle(T / 2, T / 2, 10);
+    g.fillStyle(0x7a5b3a, 1);
+    g.fillRect(T / 2 - 3, T / 2 - 13, 6, 13);
+    g.fillStyle(0x3a3a3a, 1);
+    g.fillCircle(T / 2, T / 2, 5);
+  });
 }
 
 function drawTexture(

@@ -8,7 +8,7 @@ export interface UpgradeChoice {
   id: string;
   name: string;
   desc: string;
-  category: 'weapon' | 'weaponLevel' | 'passive';
+  category: 'weapon' | 'weaponLevel' | 'passive' | 'structure';
   weight: number;
   apply: () => void;
 }
@@ -20,6 +20,7 @@ export class UpgradeSystem {
   constructor(
     private run: RunState,
     private weapons: WeaponSystem,
+    private grantBuildCredit: () => void,
   ) {}
 
   apply(choice: UpgradeChoice): void {
@@ -141,6 +142,14 @@ export class UpgradeSystem {
         apply: () => {
           rs.extraProjectiles += 1;
         },
+      },
+      {
+        id: 'struct-cannon',
+        name: '수련 포탑 설치권',
+        desc: '빌드 버튼으로 땅에 자동 포탑을 1개 설치',
+        category: 'structure',
+        weight: 5,
+        apply: () => this.grantBuildCredit(),
       },
     );
 

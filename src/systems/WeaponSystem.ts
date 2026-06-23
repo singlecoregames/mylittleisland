@@ -146,7 +146,9 @@ export class WeaponSystem {
     if (proj.pierce <= 0) proj.kill();
   };
 
-  private damageEnemy(enemy: Enemy, amount: number): void {
+  // Public so other auto-attackers (e.g. StructureSystem turrets) route kills
+  // through the same XP-drop / kill-count path.
+  damageEnemy(enemy: Enemy, amount: number): void {
     if (!enemy.active) return;
     if (enemy.takeDamage(amount)) {
       this.onKill(enemy.x, enemy.y);

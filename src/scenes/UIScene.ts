@@ -11,6 +11,8 @@ export class UIScene extends Phaser.Scene {
   private skillButton!: SkillButton;
   private bars!: Phaser.GameObjects.Graphics;
   private statusText!: Phaser.GameObjects.Text;
+  private buildBg!: Phaser.GameObjects.Rectangle;
+  private buildText!: Phaser.GameObjects.Text;
 
   constructor() {
     super(SCENE_KEYS.UI);
@@ -25,6 +27,26 @@ export class UIScene extends Phaser.Scene {
       GAME.HEIGHT - 44,
       5000,
       () => this.game.events.emit('skill'),
+    );
+
+    // Build button (above the skill button): toggles structure placement mode.
+    this.buildBg = this.add
+      .rectangle(GAME.WIDTH - 44, GAME.HEIGHT - 104, 58, 28, 0x2c7d3a, 0.85)
+      .setScrollFactor(0)
+      .setDepth(1000)
+      .setStrokeStyle(2, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    this.buildText = this.add
+      .text(GAME.WIDTH - 44, GAME.HEIGHT - 104, '설치 0', {
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(1001);
+    this.buildBg.on(Phaser.Input.Events.POINTER_DOWN, () =>
+      this.game.events.emit('toggleBuild'),
     );
 
     this.bars = this.add.graphics().setScrollFactor(0).setDepth(900);
@@ -47,6 +69,18 @@ export class UIScene extends Phaser.Scene {
     this.skillButton.update(delta);
     this.drawBars();
     this.drawStatus();
+    this.drawBuildButton();
+  }
+
+  private drawBuildButton(): void {
+    const credits = (this.registry.get('buildCredits') as number) ?? 0;
+    const active = (this.registry.get('buildMode') as boolean) ?? false;
+    this.buildText.setText(`설치 ${credits}`);
+
+    // Dim when nothing to place; highlight while placement mode is on.
+    this.buildBg.setAlpha(credits > 0 ? 0.9 : 0.4);
+    this.buildBg.setFillStyle(active ? 0x49b85c : 0x2c7d3a, 0.9);
+    this.buildBg.setStrokeStyle(2, 0xffffff, active ? 0.9 : 0);
   }
 
   private drawBars(): void {

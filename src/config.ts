@@ -25,4 +25,5 @@ export const TEX = {
   JOY_BASE: 'tex-joy-base',
   JOY_THUMB: 'tex-joy-thumb',
   SKILL_BTN: 'tex-skill-btn',
+  CANNON: 'tex-cannon',
 } as const;
