@@ -51,22 +51,12 @@ export class EnemySpawner {
       const e = child as Enemy;
       if (!e.active) return;
 
-      // Base heading: follow the flow field toward the player.
+      // Desired direction = flow-field heading toward the player + separation
+      // push from neighbours. The enemy steers its own heading toward this
+      // gradually, so it isn't normalized here.
       const dir = flow.sampleDir(e.x, e.y, targetX, targetY, this.steerVec);
-      let fx = dir.x;
-      let fy = dir.y;
-
-      // Separation: sum away-vectors from neighbours, weighted by closeness.
       const sep = this.separation(e);
-      fx += sep.x * SEP_WEIGHT;
-      fy += sep.y * SEP_WEIGHT;
-
-      const len = Math.hypot(fx, fy);
-      if (len > 0) {
-        fx /= len;
-        fy /= len;
-      }
-      e.steer(fx, fy, deltaMs);
+      e.steerToward(dir.x + sep.x * SEP_WEIGHT, dir.y + sep.y * SEP_WEIGHT, deltaMs);
     });
   }
 

@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import { GAME, TEX } from '../config';
 
+// How quickly an enemy's heading converges on its desired direction (per second
+// lerp factor). Lower = lazier, wider turns; higher = snappier.
+const TURN_RATE = 6;
+
 // A basic alien that chases the player. Pooled via the physics group; `spawn`
 // re-initializes a recycled instance. HP scales up with run time so weapons
 // stay relevant as the player grows.
@@ -8,6 +12,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   speed = 45;
   hp = 10;
   knockbackMs = 0; // while > 0, chase() yields to knockback velocity
+  // Persistent heading (unit vector). Steered gradually toward the desired
+  // direction each frame so enemies bank into turns instead of snapping.
+  private headingX = 0;
+  private headingY = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.ENEMY);
@@ -22,18 +30,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.hp = hp;
     this.speed = speed;
     this.knockbackMs = 0;
+    this.headingX = 0; // re-aligns on the first steer
+    this.headingY = 0;
     this.setTint(0xffffff);
   }
 
-  // Moves along a precomputed direction (e.g. a flow-field vector). Respects an
+  // Steers the persistent heading toward a desired direction (flow field +
+  // separation, not necessarily normalized) and moves along it. Respects an
   // active knockback window (keeps the knockback velocity until it expires).
-  steer(dirX: number, dirY: number, deltaMs: number): void {
+  steerToward(desiredX: number, desiredY: number, deltaMs: number): void {
     if (!this.active) return;
     if (this.knockbackMs > 0) {
       this.knockbackMs -= deltaMs;
       return;
     }
-    this.setVelocity(dirX * this.speed, dirY * this.speed);
+
+    const dlen = Math.hypot(desiredX, desiredY);
+    if (dlen > 1e-4) {
+      const dx = desiredX / dlen;
+      const dy = desiredY / dlen;
+      if (this.headingX === 0 && this.headingY === 0) {
+        // First frame after spawn: adopt the direction immediately.
+        this.headingX = dx;
+        this.headingY = dy;
+      } else {
+        const t = Math.min(1, (TURN_RATE * deltaMs) / 1000);
+        this.headingX += (dx - this.headingX) * t;
+        this.headingY += (dy - this.headingY) * t;
+        const hlen = Math.hypot(this.headingX, this.headingY) || 1;
+        this.headingX /= hlen;
+        this.headingY /= hlen;
+      }
+    }
+    // If there's no desired direction, coast along the current heading.
+    this.setVelocity(this.headingX * this.speed, this.headingY * this.speed);
   }
 
   knockback(fromX: number, fromY: number, force: number, durationMs: number): void {
