@@ -13,6 +13,7 @@ const SEP_WEIGHT = 0.9;
 const AVOID_WEIGHT = 1.4;
 const CELL = SEP_RADIUS; // spatial-hash cell size == neighbour radius
 const CELL_BIAS = 1024; // keeps hashed cell coords non-negative
+const BOSS_INTERVAL_MS = 90000; // an elite boss every 90s
 
 // Spawns aliens at the island's water edge on a timer and drives their chase
 // along the flow field (so they route around fences). Difficulty (spawn rate +
@@ -22,9 +23,11 @@ export class EnemySpawner {
   private accumMs = 0;
   private intervalMs = 1100;
   private elapsedMs = 0;
+  private bossTimerMs = BOSS_INTERVAL_MS;
   private steerVec = new Phaser.Math.Vector2();
   private avoidVec = new Phaser.Math.Vector2();
   private typeList = Object.values(ENEMY_TYPES);
+  private bossBars: Phaser.GameObjects.Graphics;
   // Spatial hash of active enemies, rebuilt each frame (arrays reused).
   private grid = new Map<number, Enemy[]>();
 
@@ -44,6 +47,7 @@ export class EnemySpawner {
       maxSize: 400,
       runChildUpdate: false,
     });
+    this.bossBars = scene.add.graphics().setDepth(8);
   }
 
   update(deltaMs: number, flow: FlowField, targetX: number, targetY: number): void {
@@ -56,6 +60,14 @@ export class EnemySpawner {
     }
     // Spawns accelerate toward a floor of ~320ms over the run.
     this.intervalMs = Math.max(320, this.intervalMs - deltaMs * 0.012);
+
+    // Scheduled boss spawns.
+    this.bossTimerMs -= deltaMs;
+    if (this.bossTimerMs <= 0) {
+      this.bossTimerMs += BOSS_INTERVAL_MS;
+      const { x, y } = this.randomEdgePoint();
+      this.spawnType(x, y, ENEMY_TYPES.boss);
+    }
 
     this.rebuildGrid();
 
@@ -70,26 +82,29 @@ export class EnemySpawner {
       const crowdX = sep.x * SEP_WEIGHT + avoid.x * AVOID_WEIGHT;
       const crowdY = sep.y * SEP_WEIGHT + avoid.y * AVOID_WEIGHT;
 
-      // Ranged types hold at standoff range and fire instead of closing in.
+      // Ranged types fire on cooldown while within range. `hold` types stop at
+      // standoff range; non-hold types (bosses) keep chasing while shooting.
       const ranged = e.enemyType.ranged;
       if (ranged) {
         const dx = targetX - e.x;
         const dy = targetY - e.y;
         const dist = Math.hypot(dx, dy);
         if (dist <= ranged.range) {
-          let desX = crowdX;
-          let desY = crowdY;
-          if (dist > 0 && dist < ranged.range * 0.55) {
-            desX -= dx / dist; // too close: back off
-            desY -= dy / dist;
-          }
-          e.steerToward(desX, desY, deltaMs);
           e.fireCooldownMs -= deltaMs;
           if (e.fireCooldownMs <= 0) {
             this.onEnemyFire(e.x, e.y, targetX, targetY, ranged);
             e.fireCooldownMs = ranged.cooldownMs;
           }
-          return;
+          if (ranged.hold !== false) {
+            let desX = crowdX;
+            let desY = crowdY;
+            if (dist > 0 && dist < ranged.range * 0.55) {
+              desX -= dx / dist; // too close: back off
+              desY -= dy / dist;
+            }
+            e.steerToward(desX, desY, deltaMs);
+            return;
+          }
         }
       }
 
@@ -97,6 +112,26 @@ export class EnemySpawner {
       // own heading toward this gradually, so it isn't normalized here.
       const dir = flow.sampleDir(e.x, e.y, targetX, targetY, this.steerVec);
       e.steerToward(dir.x + crowdX, dir.y + crowdY, deltaMs);
+    });
+
+    this.drawBossBars();
+  }
+
+  // Draws an HP bar above each active boss.
+  private drawBossBars(): void {
+    this.bossBars.clear();
+    this.group.getChildren().forEach((child) => {
+      const e = child as Enemy;
+      if (!e.active || !e.enemyType.isBoss) return;
+      const w = 44;
+      const h = 5;
+      const x = e.x - w / 2;
+      const y = e.y - 34;
+      const frac = Phaser.Math.Clamp(e.hp / e.maxHp, 0, 1);
+      this.bossBars.fillStyle(0x000000, 0.6);
+      this.bossBars.fillRect(x - 1, y - 1, w + 2, h + 2);
+      this.bossBars.fillStyle(0xff3b3b, 1);
+      this.bossBars.fillRect(x, y, w * frac, h);
     });
   }
 

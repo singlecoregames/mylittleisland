@@ -12,6 +12,7 @@ const DEFAULT_TURN_RATE = 6;
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   speed = 45;
   hp = 10;
+  maxHp = 10; // for boss HP bars
   knockbackMs = 0; // while > 0, chase() yields to knockback velocity
   fireCooldownMs = 0; // ranged types: time until the next shot
   enemyType: EnemyType = GRUNT;
@@ -33,6 +34,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   spawn(x: number, y: number, hp: number, speed: number, type: EnemyType): void {
     this.enableBody(true, x, y, true, true);
     this.hp = hp;
+    this.maxHp = hp;
     this.speed = speed;
     this.knockbackMs = 0;
     this.headingX = 0; // re-aligns on the first steer
@@ -44,7 +46,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.turnRate = type.turnRate ?? DEFAULT_TURN_RATE;
     this.setTexture(enemyTexKey(type.id));
     this.clearTint(); // drop any leftover hit-flash from a pooled instance
-    // Visual scale only; the physics hitbox stays the placeholder size.
+    // The Arcade circle body scales with the sprite, so the hitbox tracks size.
     this.setScale(type.scale);
   }
 

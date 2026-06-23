@@ -75,7 +75,7 @@ export class GameScene extends Phaser.Scene {
     this.inputCtrl = new InputController(this);
     this.enemyBullets = new EnemyProjectileSystem(this, this.player, this.run);
     this.spawner = new EnemySpawner(this, this.island, (x, y, tx, ty, r) =>
-      this.enemyBullets.fire(x, y, tx, ty, r.projectileSpeed, r.damage),
+      this.enemyBullets.fireVolley(x, y, tx, ty, r),
     );
 
     this.weapons = new WeaponSystem(
@@ -110,9 +110,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.island.worldWidth, this.island.worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
 
-    // Contact damage when an alien touches the frog.
-    this.physics.add.overlap(this.player, this.spawner.group, () => {
-      if (!this.dead) this.run.takeDamage(0.5);
+    // Contact damage when an alien touches the frog (per-type, default 0.5).
+    this.physics.add.overlap(this.player, this.spawner.group, (_p, enemy) => {
+      if (!this.dead) this.run.takeDamage((enemy as Enemy).enemyType.contactDmg ?? 0.5);
     });
 
     // Active skill (croak burst) fired from UIScene.

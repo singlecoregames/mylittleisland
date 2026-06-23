@@ -13,9 +13,21 @@ export interface EnemyType {
   xp: number; // gem value dropped on death
   spawnWeight: number; // relative natural-spawn weight (0 = never rolled)
   minMinutes: number; // earliest run time (minutes) this type can appear
+  contactDmg?: number; // per-overlap-frame damage to the player (default 0.5)
+  isBoss?: boolean; // scheduled separately + draws an HP bar
   splitInto?: { type: string; count: number }; // children spawned on death
-  // Ranged attacker: holds at `range`, fires a bullet every `cooldownMs`.
-  ranged?: { range: number; cooldownMs: number; projectileSpeed: number; damage: number };
+  // Ranged attacker. Fires every `cooldownMs` while within `range`. `hold`
+  // (default true) makes it stop at standoff range; bosses set it false to keep
+  // chasing while shooting. `burst`/`spread` define a fan or radial volley.
+  ranged?: {
+    range: number;
+    cooldownMs: number;
+    projectileSpeed: number;
+    damage: number;
+    hold?: boolean;
+    burst?: number; // bullets per volley (default 1)
+    spread?: number; // total fan angle in radians; >= 2π = full radial
+  };
 }
 
 export const ENEMY_TYPES: Record<string, EnemyType> = {
@@ -82,6 +94,31 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
     spawnWeight: 28,
     minMinutes: 2,
     ranged: { range: 150, cooldownMs: 1600, projectileSpeed: 160, damage: 6 },
+  },
+  // Elite boss — scheduled on a timer, not rolled. Huge, slow, knockback-proof,
+  // chases while emitting radial bullet rings. Big XP payout on death.
+  boss: {
+    id: 'boss',
+    color: 0x8b1a1a,
+    scale: 2.6,
+    hpMult: 40,
+    speedMult: 0.5,
+    turnRate: 2.5,
+    knockbackResist: 1,
+    contactDmg: 1,
+    isBoss: true,
+    xp: 30,
+    spawnWeight: 0,
+    minMinutes: 0,
+    ranged: {
+      range: 240,
+      cooldownMs: 2400,
+      projectileSpeed: 120,
+      damage: 8,
+      hold: false,
+      burst: 14,
+      spread: Math.PI * 2,
+    },
   },
   // Splitter offspring — small, quick, never rolled naturally.
   spawnling: {
