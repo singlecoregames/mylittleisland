@@ -4,6 +4,7 @@ import { Projectile } from '../entities/Projectile';
 import { Structure } from '../entities/Structure';
 import { Enemy } from '../entities/Enemy';
 import { STRUCTURES, type StructureDef } from '../data/structures';
+import { AudioSystem } from '../core/AudioSystem';
 import type { IslandManager } from './IslandManager';
 import type { WeaponSystem } from './WeaponSystem';
 import type { FlowField } from './FlowField';
@@ -106,6 +107,7 @@ export class StructureSystem {
     // Fences are solid, so they reshape enemy pathing.
     if (def.kind === 'fence') this.flow.markBlocked(col, row);
 
+    AudioSystem.play('place');
     this.addCredits(id, -1);
     if (this.creditsOf(id) <= 0) this.setBuildMode(false);
     return true;

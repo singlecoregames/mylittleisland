@@ -3,6 +3,7 @@ import { Projectile } from '../entities/Projectile';
 import type { Player } from '../entities/Player';
 import type { RunState } from '../state/RunState';
 import type { EnemyType } from '../data/enemies';
+import { AudioSystem } from '../core/AudioSystem';
 
 type RangedDef = NonNullable<EnemyType['ranged']>;
 
@@ -23,6 +24,8 @@ export class EnemyProjectileSystem {
       if (!proj.active) return;
       run.takeDamage(proj.damage);
       proj.kill();
+      AudioSystem.play('hurt');
+      scene.cameras.main.shake(120, 0.006);
     });
   }
 

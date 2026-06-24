@@ -3,6 +3,7 @@ import { Projectile } from '../entities/Projectile';
 import { Enemy } from '../entities/Enemy';
 import type { Player } from '../entities/Player';
 import type { RunState } from '../state/RunState';
+import { AudioSystem } from '../core/AudioSystem';
 import {
   WEAPONS,
   WeaponDef,
@@ -101,6 +102,7 @@ export class WeaponSystem {
         );
       }
     }
+    AudioSystem.play('shoot');
     return true;
   }
 

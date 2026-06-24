@@ -8,9 +8,10 @@ export interface SaveData {
   version: number;
   amber: number; // permanent currency earned from runs
   nodes: string[]; // unlocked meta-graph node ids (used from M5 step 2)
+  muted: boolean; // SFX muted (settings)
 }
 
-const DEFAULT: SaveData = { version: 1, amber: 0, nodes: [] };
+const DEFAULT: SaveData = { version: 1, amber: 0, nodes: [], muted: false };
 
 export class SaveManager {
   static load(): SaveData {
@@ -22,6 +23,7 @@ export class SaveManager {
         version: DEFAULT.version,
         amber: typeof parsed.amber === 'number' && parsed.amber >= 0 ? parsed.amber : 0,
         nodes: Array.isArray(parsed.nodes) ? parsed.nodes.filter((n) => typeof n === 'string') : [],
+        muted: parsed.muted === true,
       };
     } catch {
       // localStorage blocked (private mode) or malformed JSON — start fresh.
@@ -52,6 +54,14 @@ export class SaveManager {
     if (data.nodes.includes(id) || data.amber < cost) return data;
     data.amber -= cost;
     data.nodes.push(id);
+    this.save(data);
+    return data;
+  }
+
+  // Persists the SFX mute setting, returning the updated save.
+  static setMuted(muted: boolean): SaveData {
+    const data = this.load();
+    data.muted = muted;
     this.save(data);
     return data;
   }

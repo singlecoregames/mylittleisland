@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { XpGem } from '../entities/XpGem';
 import type { Player } from '../entities/Player';
 import type { RunState } from '../state/RunState';
+import { AudioSystem } from '../core/AudioSystem';
 
 // Spawns XP gems on enemy death, attracts them to the player within pickup
 // radius, collects them, and notifies on level-up.
@@ -49,6 +50,7 @@ export class XPSystem {
     if (!gem.active) return;
     const value = gem.value;
     gem.kill();
+    AudioSystem.play('pickup');
     const levelUps = this.run.addXp(value);
     if (levelUps > 0) this.onLevelUp(levelUps);
   };

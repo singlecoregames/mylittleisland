@@ -8,6 +8,7 @@ export const GAME = {
 export const SCENE_KEYS = {
   BOOT: 'Boot',
   PRELOAD: 'Preload',
+  TITLE: 'Title',
   GAME: 'Game',
   UI: 'UI',
   RESULT: 'Result',

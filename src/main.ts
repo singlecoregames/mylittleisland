@@ -2,11 +2,13 @@ import Phaser from 'phaser';
 import { GAME, SCENE_KEYS } from './config';
 import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
+import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { LevelUpScene } from './scenes/LevelUpScene';
 import { ResultScene } from './scenes/ResultScene';
 import { MetaScene } from './scenes/MetaScene';
+import { AudioSystem } from './core/AudioSystem';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -30,8 +32,19 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, GameScene, UIScene, LevelUpScene, ResultScene, MetaScene],
+  scene: [
+    BootScene,
+    PreloadScene,
+    TitleScene,
+    GameScene,
+    UIScene,
+    LevelUpScene,
+    ResultScene,
+    MetaScene,
+  ],
 };
+
+AudioSystem.init();
 
 // eslint-disable-next-line no-new
 new Phaser.Game(config);

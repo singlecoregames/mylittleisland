@@ -23,6 +23,6 @@ export class PreloadScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
-    this.scene.start(SCENE_KEYS.GAME);
+    this.scene.start(SCENE_KEYS.TITLE);
   }
 }

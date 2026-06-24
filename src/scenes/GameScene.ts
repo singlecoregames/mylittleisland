@@ -14,6 +14,7 @@ import { InputController } from '../core/InputController';
 import { RunState } from '../state/RunState';
 import { SaveManager } from '../core/SaveManager';
 import { aggregateBonuses } from '../data/metaNodes';
+import { AudioSystem } from '../core/AudioSystem';
 import type { LevelUpScene, LevelUpData } from './LevelUpScene';
 
 // Recompute the flow field at most this often (ms) even if the goal keeps moving.
@@ -86,6 +87,10 @@ export class GameScene extends Phaser.Scene {
       (enemy) => {
         this.xp.spawnGem(enemy.x, enemy.y, enemy.enemyType.xp);
         this.spawner.splitOnDeath(enemy);
+        if (enemy.enemyType.isBoss) {
+          AudioSystem.play('bossDown');
+          this.cameras.main.shake(260, 0.01);
+        }
       },
     );
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
@@ -149,6 +154,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onSkill(): void {
+    AudioSystem.play('skill');
     const radius = 96;
     this.spawner.group.getChildren().forEach((child) => {
       const e = child as Enemy;
@@ -164,6 +170,8 @@ export class GameScene extends Phaser.Scene {
   // launch) was unreliable on the web and could leave cards unclickable.
 
   private queueLevelUps(count: number): void {
+    if (count <= 0) return;
+    AudioSystem.play('levelup');
     this.pendingLevelUps += count;
     if (!this.levelUpActive && this.pendingLevelUps > 0) this.beginLevelUp();
   }
@@ -195,6 +203,7 @@ export class GameScene extends Phaser.Scene {
 
   private gameOver(): void {
     this.dead = true;
+    AudioSystem.play('gameover');
     this.physics.pause();
 
     // Hand the run summary to the settlement scene, which awards/persists amber.
