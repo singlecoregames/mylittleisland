@@ -12,6 +12,8 @@ export class RunState {
   damageMult = 1; // global weapon damage multiplier
   cooldownMult = 1; // global weapon cooldown multiplier (<1 = faster)
   extraProjectiles = 0; // bonus projectiles for projectile weapons
+  regenPerSec = 0; // HP regenerated per second (meta)
+  xpGainMult = 1; // multiplier on XP gained (meta)
 
   // --- Progression ---
   level = 1;
@@ -34,11 +36,21 @@ export class RunState {
     this.damageMult += b.damageMult;
     this.cooldownMult = Math.max(0.2, this.cooldownMult - b.cooldownReduction);
     this.extraProjectiles += b.extraProjectiles;
+    this.regenPerSec += b.regenPerSec;
+    this.xpGainMult += b.xpGainMult;
   }
 
-  // Adds XP and returns how many level-ups were triggered this call.
+  // Regenerates HP over time (meta "regen" nodes). No-op when regen is 0.
+  regen(dtSec: number): void {
+    if (this.regenPerSec > 0 && this.hp > 0) {
+      this.hp = Math.min(this.maxHp, this.hp + this.regenPerSec * dtSec);
+    }
+  }
+
+  // Adds XP (scaled by the meta gain multiplier) and returns how many level-ups
+  // were triggered this call.
   addXp(amount: number): number {
-    this.xp += amount;
+    this.xp += amount * this.xpGainMult;
     let levelUps = 0;
     while (this.xp >= this.xpToNext) {
       this.xp -= this.xpToNext;

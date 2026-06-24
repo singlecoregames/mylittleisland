@@ -172,6 +172,12 @@ export class UpgradeSystem {
         return '근접한 적을 자동 타격';
       case 'aura':
         return '주변 적에게 지속 광역 피해';
+      case 'nova':
+        return '사방으로 탄을 터뜨린다';
+      case 'lightning':
+        return '범위 내 여러 적에게 번개';
+      case 'orbit':
+        return '주위를 도는 오브로 타격';
       default:
         return '';
     }

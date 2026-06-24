@@ -10,6 +10,9 @@ import {
   weaponCooldown,
   weaponDamage,
   weaponProjectileCount,
+  weaponNovaCount,
+  weaponOrbCount,
+  weaponTargets,
   weaponRange,
 } from '../data/weapons';
 
@@ -25,6 +28,7 @@ export class WeaponSystem {
   private projectiles: Phaser.Physics.Arcade.Group;
   private instances = new Map<string, WeaponInstance>();
   private fx: Phaser.GameObjects.Graphics;
+  private orbitAngle = 0; // shared rotation phase for orbit weapons
 
   constructor(
     scene: Phaser.Scene,
@@ -54,6 +58,7 @@ export class WeaponSystem {
   update(deltaMs: number): void {
     this.fx.clear();
     for (const inst of this.instances.values()) {
+      if (inst.def.kind === 'orbit') continue; // orbit ticks continuously below
       inst.cooldownRemaining -= deltaMs;
       if (inst.cooldownRemaining <= 0) {
         const fired = this.fire(inst);
@@ -63,6 +68,7 @@ export class WeaponSystem {
           : 120;
       }
     }
+    this.updateOrbits(deltaMs);
   }
 
   private fire(inst: WeaponInstance): boolean {
@@ -74,6 +80,12 @@ export class WeaponSystem {
         return this.fireMelee(inst.def, level);
       case 'aura':
         return this.fireAura(inst.def, level);
+      case 'nova':
+        return this.fireNova(inst.def, level);
+      case 'lightning':
+        return this.fireLightning(inst.def, level);
+      case 'orbit':
+        return false; // handled in updateOrbits
     }
   }
 
@@ -90,20 +102,97 @@ export class WeaponSystem {
       // Fan the extra shots symmetrically around the aim direction.
       const offset = count === 1 ? 0 : (i - (count - 1) / 2) * spread;
       const angle = baseAngle + offset;
-      const proj = this.projectiles.get(this.player.x, this.player.y) as Projectile | null;
-      if (proj) {
-        proj.fire(
-          this.player.x,
-          this.player.y,
-          Math.cos(angle) * speed,
-          Math.sin(angle) * speed,
-          dmg,
-          def.pierce ?? 1,
-        );
-      }
+      this.spawnProjectile(angle, speed, dmg, def.pierce ?? 1, def.color);
     }
     AudioSystem.play('shoot');
     return true;
+  }
+
+  // Radial burst in all directions (nova kind), independent of any target.
+  private fireNova(def: WeaponDef, level: number): boolean {
+    const count = weaponNovaCount(def, level, this.run.extraProjectiles);
+    const speed = def.projectileSpeed ?? 180;
+    const dmg = weaponDamage(def, level, this.run.damageMult);
+    for (let i = 0; i < count; i++) {
+      this.spawnProjectile((i / count) * Math.PI * 2, speed, dmg, def.pierce ?? 1, def.color);
+    }
+    AudioSystem.play('shoot');
+    return true;
+  }
+
+  // Strikes up to N enemies within range instantly, drawing a bolt to each.
+  private fireLightning(def: WeaponDef, level: number): boolean {
+    const range = weaponRange(def, level);
+    const dmg = weaponDamage(def, level, this.run.damageMult);
+    const inRange: Enemy[] = [];
+    this.enemies.getChildren().forEach((child) => {
+      const e = child as Enemy;
+      if (!e.active) return;
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y) <= range) {
+        inRange.push(e);
+      }
+    });
+    if (inRange.length === 0) return false;
+
+    const want = weaponTargets(def, level);
+    const color = def.color ?? 0xfff2a0;
+    for (let i = 0; i < want && inRange.length > 0; i++) {
+      const idx = Phaser.Math.Between(0, inRange.length - 1);
+      const e = inRange.splice(idx, 1)[0];
+      this.fx.lineStyle(2, color, 0.9);
+      this.fx.lineBetween(this.player.x, this.player.y, e.x, e.y);
+      this.damageEnemy(e, dmg);
+    }
+    AudioSystem.play('shoot');
+    return true;
+  }
+
+  // Spawns one tinted projectile travelling at `angle` from the player.
+  private spawnProjectile(
+    angle: number,
+    speed: number,
+    dmg: number,
+    pierce: number,
+    color?: number,
+  ): void {
+    const proj = this.projectiles.get(this.player.x, this.player.y) as Projectile | null;
+    if (!proj) return;
+    proj.fire(this.player.x, this.player.y, Math.cos(angle) * speed, Math.sin(angle) * speed, dmg, pierce);
+    proj.setTint(color ?? 0xffffff);
+  }
+
+  // Orbiting orbs: drawn every frame (continuous spin), damaging nearby enemies
+  // on each weapon tick. Shared rotation phase keeps multiple orbit weapons in
+  // sync visually.
+  private updateOrbits(deltaMs: number): void {
+    this.orbitAngle += deltaMs * 0.005;
+    for (const inst of this.instances.values()) {
+      if (inst.def.kind !== 'orbit') continue;
+      const def = inst.def;
+      const level = this.run.weapons.get(def.id) ?? 1;
+      const orbs = weaponOrbCount(def, level);
+      const radius = weaponRange(def, level);
+      const dmg = weaponDamage(def, level, this.run.damageMult);
+
+      inst.cooldownRemaining -= deltaMs;
+      const tick = inst.cooldownRemaining <= 0;
+      if (tick) inst.cooldownRemaining = weaponCooldown(def, this.run.cooldownMult);
+
+      for (let i = 0; i < orbs; i++) {
+        const a = this.orbitAngle + (i / orbs) * Math.PI * 2;
+        const ox = this.player.x + Math.cos(a) * radius;
+        const oy = this.player.y + Math.sin(a) * radius;
+        this.fx.fillStyle(def.color ?? 0x49b85c, 0.95);
+        this.fx.fillCircle(ox, oy, 5);
+        if (tick) {
+          this.enemies.getChildren().forEach((child) => {
+            const e = child as Enemy;
+            if (!e.active) return;
+            if (Phaser.Math.Distance.Between(ox, oy, e.x, e.y) <= 12) this.damageEnemy(e, dmg);
+          });
+        }
+      }
+    }
   }
 
   private fireMelee(def: WeaponDef, level: number): boolean {
@@ -113,9 +202,10 @@ export class WeaponSystem {
     const dmg = weaponDamage(def, level, this.run.damageMult);
     this.damageEnemy(target, dmg);
 
-    // Quick tongue flick visual toward the target.
-    this.fx.lineStyle(3, 0xff5fa2, 0.9);
+    // Quick flick visual toward the target.
+    this.fx.lineStyle(3, def.color ?? 0xff5fa2, 0.9);
     this.fx.lineBetween(this.player.x, this.player.y, target.x, target.y);
+    AudioSystem.play('shoot');
     return true;
   }
 

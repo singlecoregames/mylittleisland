@@ -45,7 +45,7 @@ export class EnemySpawner {
   ) {
     this.group = scene.physics.add.group({
       classType: Enemy,
-      maxSize: 400,
+      maxSize: 700, // headroom for the denser swarm
       runChildUpdate: false,
     });
     this.bossBars = scene.add.graphics().setDepth(8);
@@ -205,9 +205,10 @@ export class EnemySpawner {
   private spawnType(x: number, y: number, type: EnemyType): void {
     const enemy = this.group.get(x, y) as Enemy | null;
     if (!enemy) return;
-    // Base HP grows ~+1 every 15s; base speed drifts up slightly.
+    // Base HP grows ~+1 every 18s; lowered (from 8 +15s) to balance the denser
+    // swarm so weapons keep mowing through. Base speed drifts up slightly.
     const minutes = this.elapsedMs / 60000;
-    const baseHp = 8 + Math.floor(this.elapsedMs / 15000);
+    const baseHp = 6 + Math.floor(this.elapsedMs / 18000);
     const baseSpeed = 42 + minutes * 6;
     enemy.spawn(x, y, Math.max(1, Math.round(baseHp * type.hpMult)), baseSpeed * type.speedMult, type);
   }

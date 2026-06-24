@@ -239,6 +239,7 @@ export class GameScene extends Phaser.Scene {
 
     this.run.timeMs += delta;
     const dt = delta / 1000;
+    this.run.regen(dt);
 
     const dir = this.inputCtrl.getMoveVector(this.moveVec);
     this.player.move(dir, this.island, dt);
