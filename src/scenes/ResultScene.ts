@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, SCENE_KEYS } from '../config';
 import { SaveManager } from '../core/SaveManager';
+import { aggregateBonuses } from '../data/metaNodes';
 
 // Run settlement: shown when the frog dies. Converts the run summary into
 // permanent currency (amber), persists it, and returns to a fresh run on tap.
@@ -25,7 +26,9 @@ export class ResultScene extends Phaser.Scene {
 
   create(data: ResultData): void {
     const secs = Math.floor(data.timeMs / 1000);
-    const earned = ResultScene.earnedAmber(data);
+    // Meta "amber gain" nodes boost the run payout.
+    const amberMult = 1 + aggregateBonuses(SaveManager.load().nodes).amberGainMult;
+    const earned = Math.floor(ResultScene.earnedAmber(data) * amberMult);
     const save = SaveManager.addAmber(earned);
 
     // Dim backdrop over the (stopped) game.

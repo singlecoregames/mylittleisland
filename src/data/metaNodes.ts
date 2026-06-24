@@ -21,6 +21,9 @@ export interface MetaBonuses {
   startCannons: number; // turret build credits granted at run start
   startFences: number; // fence build credits granted at run start
   structureDamageMult: number; // added on top of base 1.0 for structures
+  regenPerSec: number; // HP regenerated per second during a run
+  xpGainMult: number; // added on top of base 1.0 for XP gained
+  amberGainMult: number; // added on top of base 1.0 for amber earned per run
 }
 
 export interface MetaNode {
@@ -81,6 +84,17 @@ export const META_NODES: MetaNode[] = [
     effects: { islandTiles: 3 },
     isIslandExpansion: true,
   },
+  {
+    id: 'isle4',
+    name: '섬 확장 IV',
+    description: '광대한 대지. (+3 타일)',
+    category: 'island',
+    cost: 80,
+    position: { x: 320, y: -148 },
+    requires: ['isle3'],
+    effects: { islandTiles: 3 },
+    isIslandExpansion: true,
+  },
 
   // --- Attack branch (right) ----------------------------------------------
   {
@@ -113,6 +127,36 @@ export const META_NODES: MetaNode[] = [
     requires: ['atk2'],
     effects: { extraProjectiles: 1 },
   },
+  {
+    id: 'atk4',
+    name: '맹독 송곳니',
+    description: '모든 무기 데미지 +20%.',
+    category: 'attack',
+    cost: 60,
+    position: { x: 728, y: 14 },
+    requires: ['atk3'],
+    effects: { damageMult: 0.2 },
+  },
+  {
+    id: 'atk5',
+    name: '전광석화',
+    description: '무기 쿨다운 -10%.',
+    category: 'attack',
+    cost: 70,
+    position: { x: 636, y: -40 },
+    requires: ['atk3'],
+    effects: { cooldownReduction: 0.1 },
+  },
+  {
+    id: 'atk6',
+    name: '독 분비선',
+    description: '모든 무기 데미지 +15%.',
+    category: 'attack',
+    cost: 26,
+    position: { x: 540, y: 196 },
+    requires: ['atk1'],
+    effects: { damageMult: 0.15 },
+  },
 
   // --- Survival branch (left) ---------------------------------------------
   {
@@ -132,6 +176,36 @@ export const META_NODES: MetaNode[] = [
     category: 'survival',
     cost: 16,
     position: { x: 100, y: 104 },
+    requires: ['sur1'],
+    effects: { moveSpeed: 15 },
+  },
+  {
+    id: 'sur3',
+    name: '바위 등껍질',
+    description: '최대 체력 +40.',
+    category: 'survival',
+    cost: 40,
+    position: { x: 16, y: 58 },
+    requires: ['sur2'],
+    effects: { maxHp: 40 },
+  },
+  {
+    id: 'sur4',
+    name: '재생력',
+    description: '초당 체력 0.6 회복.',
+    category: 'survival',
+    cost: 55,
+    position: { x: 104, y: 16 },
+    requires: ['sur2'],
+    effects: { regenPerSec: 0.6 },
+  },
+  {
+    id: 'sur5',
+    name: '도약',
+    description: '이동 속도 +15.',
+    category: 'survival',
+    cost: 24,
+    position: { x: 124, y: 196 },
     requires: ['sur1'],
     effects: { moveSpeed: 15 },
   },
@@ -156,6 +230,36 @@ export const META_NODES: MetaNode[] = [
     position: { x: 320, y: 376 },
     requires: ['util1'],
     effects: { startXp: 10 },
+  },
+  {
+    id: 'util3',
+    name: '깨달음',
+    description: '경험치 획득량 +15%.',
+    category: 'util',
+    cost: 34,
+    position: { x: 320, y: 456 },
+    requires: ['util2'],
+    effects: { xpGainMult: 0.15 },
+  },
+  {
+    id: 'util-mag',
+    name: '끈끈한 혀',
+    description: '경험치 흡수 반경 +30.',
+    category: 'util',
+    cost: 18,
+    position: { x: 236, y: 336 },
+    requires: ['util1'],
+    effects: { pickupRadius: 30 },
+  },
+  {
+    id: 'util-amber',
+    name: '호박석 광맥',
+    description: '런 종료 호박석 +20%.',
+    category: 'util',
+    cost: 30,
+    position: { x: 404, y: 336 },
+    requires: ['util1'],
+    effects: { amberGainMult: 0.2 },
   },
 
   // --- Structure branch (lower flanks) ------------------------------------
@@ -190,6 +294,16 @@ export const META_NODES: MetaNode[] = [
     effects: { structureDamageMult: 0.3 },
   },
   {
+    id: 'fac-cannon3',
+    name: '포탑 군집',
+    description: '런 시작 시 수련 포탑 설치권 +1.',
+    category: 'structure',
+    cost: 64,
+    position: { x: 728, y: 392 },
+    requires: ['fac-power'],
+    effects: { startCannons: 1 },
+  },
+  {
     id: 'fac-fence1',
     name: '울타리 배치도',
     description: '런 시작 시 가시 울타리 설치권 +1.',
@@ -198,6 +312,26 @@ export const META_NODES: MetaNode[] = [
     position: { x: 194, y: 248 },
     requires: ['root'],
     effects: { startFences: 1 },
+  },
+  {
+    id: 'fac-fence2',
+    name: '울타리 증설',
+    description: '런 시작 시 가시 울타리 설치권 +1.',
+    category: 'structure',
+    cost: 30,
+    position: { x: 100, y: 296 },
+    requires: ['fac-fence1'],
+    effects: { startFences: 1 },
+  },
+  {
+    id: 'fac-fence-power',
+    name: '가시 강화',
+    description: '모든 시설 데미지 +20%.',
+    category: 'structure',
+    cost: 40,
+    position: { x: 16, y: 344 },
+    requires: ['fac-fence2'],
+    effects: { structureDamageMult: 0.2 },
   },
 ];
 
@@ -219,6 +353,9 @@ export function emptyBonuses(): MetaBonuses {
     startCannons: 0,
     startFences: 0,
     structureDamageMult: 0,
+    regenPerSec: 0,
+    xpGainMult: 0,
+    amberGainMult: 0,
   };
 }
 
