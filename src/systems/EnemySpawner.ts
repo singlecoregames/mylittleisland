@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import { ENEMY_TYPES, GRUNT, type EnemyType } from '../data/enemies';
 import { BOSS_EVERY_MS, currentPhase, type WavePhase } from '../data/waves';
+import { AudioSystem } from '../core/AudioSystem';
 import type { IslandManager } from '../systems/IslandManager';
 import type { FlowField } from './FlowField';
 
@@ -27,6 +28,7 @@ export class EnemySpawner {
   private steerVec = new Phaser.Math.Vector2();
   private avoidVec = new Phaser.Math.Vector2();
   private bossBars: Phaser.GameObjects.Graphics;
+  private scene: Phaser.Scene;
   // Spatial hash of active enemies, rebuilt each frame (arrays reused).
   private grid = new Map<number, Enemy[]>();
 
@@ -47,6 +49,7 @@ export class EnemySpawner {
       runChildUpdate: false,
     });
     this.bossBars = scene.add.graphics().setDepth(8);
+    this.scene = scene;
   }
 
   update(deltaMs: number, flow: FlowField, targetX: number, targetY: number): void {
@@ -67,6 +70,8 @@ export class EnemySpawner {
       this.bossTimerMs += BOSS_EVERY_MS;
       const { x, y } = this.randomEdgePoint();
       this.spawnType(x, y, ENEMY_TYPES.boss);
+      AudioSystem.play('bossSpawn');
+      this.scene.cameras.main.shake(300, 0.008);
     }
 
     this.rebuildGrid();
