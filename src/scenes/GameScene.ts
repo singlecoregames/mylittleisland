@@ -124,9 +124,12 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on('skill', this.onSkill, this);
     // Build button (UIScene) toggles structure placement mode.
     this.game.events.on('toggleBuild', this.onToggleBuild, this);
+    // Pause button (UIScene) opens the pause overlay.
+    this.game.events.on('pause', this.onPause, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('skill', this.onSkill, this);
       this.game.events.off('toggleBuild', this.onToggleBuild, this);
+      this.game.events.off('pause', this.onPause, this);
     });
 
     // Tap-to-place: record the tap origin, then place on release if it was a
@@ -151,6 +154,22 @@ export class GameScene extends Phaser.Scene {
   private onToggleBuild(structureId: string): void {
     this.structures.toggleBuildMode(structureId);
     if (this.structures.buildMode) this.buildModeAt = this.time.now;
+  }
+
+  private onPause(): void {
+    if (this.dead || this.levelUpActive || this.scene.isPaused()) return;
+    this.scene.pause();
+    this.scene.launch(SCENE_KEYS.PAUSE, {
+      onResume: () => {
+        this.scene.stop(SCENE_KEYS.PAUSE);
+        this.scene.resume();
+      },
+      onQuit: () => {
+        this.scene.stop(SCENE_KEYS.PAUSE);
+        this.scene.stop(SCENE_KEYS.UI);
+        this.scene.start(SCENE_KEYS.TITLE); // shuts down GameScene
+      },
+    });
   }
 
   private onSkill(): void {

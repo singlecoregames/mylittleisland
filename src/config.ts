@@ -11,6 +11,7 @@ export const SCENE_KEYS = {
   TITLE: 'Title',
   GAME: 'Game',
   UI: 'UI',
+  PAUSE: 'Pause',
   RESULT: 'Result',
   META: 'Meta',
 } as const;

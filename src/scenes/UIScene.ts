@@ -53,6 +53,19 @@ export class UIScene extends Phaser.Scene {
       this.buildButtons.push({ id, bg, text });
     });
 
+    // Pause button (top-right).
+    const pauseBg = this.add
+      .rectangle(GAME.WIDTH - 18, 14, 24, 22, 0x000000, 0.45)
+      .setScrollFactor(0)
+      .setDepth(1000)
+      .setInteractive({ useHandCursor: true });
+    this.add
+      .text(GAME.WIDTH - 18, 14, 'II', { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(1001);
+    pauseBg.on(Phaser.Input.Events.POINTER_DOWN, () => this.game.events.emit('pause'));
+
     this.bars = this.add.graphics().setScrollFactor(0).setDepth(900);
 
     this.statusText = this.add

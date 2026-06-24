@@ -5,6 +5,7 @@ import { PreloadScene } from './scenes/PreloadScene';
 import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { PauseScene } from './scenes/PauseScene';
 import { LevelUpScene } from './scenes/LevelUpScene';
 import { ResultScene } from './scenes/ResultScene';
 import { MetaScene } from './scenes/MetaScene';
@@ -38,6 +39,7 @@ const config: Phaser.Types.Core.GameConfig = {
     TitleScene,
     GameScene,
     UIScene,
+    PauseScene,
     LevelUpScene,
     ResultScene,
     MetaScene,
