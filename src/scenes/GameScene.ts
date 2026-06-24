@@ -7,6 +7,7 @@ import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { StructureSystem } from '../systems/StructureSystem';
 import { EnemyProjectileSystem } from '../systems/EnemyProjectileSystem';
+import { ObstacleSystem } from '../systems/ObstacleSystem';
 import { FlowField } from '../systems/FlowField';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -35,6 +36,7 @@ export class GameScene extends Phaser.Scene {
   private upgrades!: UpgradeSystem;
   private structures!: StructureSystem;
   private enemyBullets!: EnemyProjectileSystem;
+  private obstacles!: ObstacleSystem;
   private flow!: FlowField;
   private moveVec = new Phaser.Math.Vector2();
   private tapStart = new Phaser.Math.Vector2();
@@ -93,6 +95,12 @@ export class GameScene extends Phaser.Scene {
         }
       },
     );
+    // Scatter rocks: ~1 on the base island, ~3-4 at full island expansion.
+    const obstacleCount = 1 + Math.round((side - BASE_ISLAND) / 3);
+    this.obstacles = new ObstacleSystem(this, this.island, this.flow, obstacleCount);
+    this.physics.add.collider(this.spawner.group, this.obstacles.group);
+    this.physics.add.collider(this.player, this.obstacles.group);
+
     this.xp = new XPSystem(this, this.player, this.run, (n) => this.queueLevelUps(n));
     this.structures = new StructureSystem(
       this,
