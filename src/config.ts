@@ -29,4 +29,5 @@ export const TEX = {
   SKILL_BTN: 'tex-skill-btn',
   CANNON: 'tex-cannon',
   FENCE: 'tex-fence',
+  ROCK: 'tex-rock',
 } as const;

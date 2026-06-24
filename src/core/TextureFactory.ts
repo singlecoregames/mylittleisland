@@ -116,6 +116,18 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
       g.fillTriangle(x + 1.4, 7 + (i % 2) * 4, x + 2.6, 7 + (i % 2) * 4, x + 2, 4 + (i % 2) * 4);
     }
   });
+
+  // --- Rock: a chunky grey boulder filling most of the tile ---
+  drawTexture(scene, TEX.ROCK, T, T, (g) => {
+    g.fillStyle(0x4a4f57, 1);
+    g.fillCircle(T / 2, T / 2 + 1, 13);
+    g.fillStyle(0x6b7079, 1);
+    g.fillCircle(T / 2, T / 2, 12);
+    g.fillStyle(0x868c96, 1);
+    g.fillCircle(T / 2 - 3, T / 2 - 3, 5); // highlight
+    g.fillStyle(0x3a3e45, 1);
+    g.fillRect(T / 2 - 6, T / 2 + 4, 12, 2); // crack
+  });
 }
 
 function drawTexture(
